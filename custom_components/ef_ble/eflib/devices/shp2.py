@@ -52,6 +52,12 @@ class PVStatus(IntFieldValue):
     HV = 2
     LV_AND_HV = 3
 
+class ChannelStatus(IntFieldValue):
+    UNKNOWN = -1
+
+    DISABLED = 0
+    ENABLED = 1
+
 
 @dataclass
 class CircuitPowerField(
@@ -487,7 +493,7 @@ class Device(DeviceBase, ProtobufProps):
 
     async def set_config_flag(self, enable):
         """Send command to enable/disable sending config data from device to the host"""
-        self._logger.debug("%s: setConfigFlag: %s", self._address, enable)
+        self._logger.debug("%s: %s: setConfigFlag: %s", self.address, self.name, enable)
 
         ppas = pd303_pb2.ProtoPushAndSet()
         ppas.is_get_cfg_flag = enable
@@ -498,12 +504,12 @@ class Device(DeviceBase, ProtobufProps):
     async def set_circuit_power(self, circuit_id, enable):
         """Send command to power on / off the specific circuit of the panel"""
         self._logger.debug(
-            "%s: setCircuitPower for %d: %s", self._address, circuit_id, enable
+            "%s: %s: setCircuitPower for %d: %s", self.address, self.name, circuit_id, enable
         )
 
         ppas = pd303_pb2.ProtoPushAndSet()
         sta = getattr(
-            ppas.load_incre_info.hall1_incre_info, "ch" + str(circuit_id + 1) + "_sta"
+            ppas.load_incre_info.hall1_incre_info, "ch" + str(circuit_id) + "_sta"
         )
         sta.load_sta = (
             pd303_pb2.LOAD_CH_POWER_ON if enable else pd303_pb2.LOAD_CH_POWER_OFF
@@ -515,16 +521,31 @@ class Device(DeviceBase, ProtobufProps):
 
     async def set_backup_battery_level(self, value: int):
         self._logger.debug(
-            "%s: set_backup_battery_level: %d", self._address, value
+            "%s: %s: set_backup_battery_level: %d", self.address, self.name, value
         )
         ppas = pd303_pb2.ProtoPushAndSet()
         ppas.backup_reserve_soc = value
         await self._send_config_packet(ppas)
         return True
 
+    async def set_channel_enable(self, channel_id, value: bool):
+        self._logger.warning(
+            "%s: %s: set_channel_enable: %d %s", self.address, self.name, channel_id, value
+        )
+        ppas = pd303_pb2.ProtoPushAndSet()
+        sta = getattr(
+            ppas.backup_incre_info, "Energy" + str(channel_id) + "_info"
+        )
+        sta.is_enable = (
+            ChannelStatus.ENABLED if value else ChannelStatus.DISABLED
+        )
+        #setattr(ppas, "ch" + str(channel_id) + "_enable_set", ChannelStatus.ENABLED if value else ChannelStatus.DISABLED)
+        await self._send_config_packet(ppas)
+        return True
+
     async def set_smart_backup_mode(self, value: int):
         self._logger.debug(
-            "%s: set_smart_backup_mode: %d", self._address, value
+            "%s: %s: set_smart_backup_mode: %d", self.address, self.name, value
         )
         ppas = pd303_pb2.ProtoPushAndSet()
         ppas.smart_backup_mode = value
