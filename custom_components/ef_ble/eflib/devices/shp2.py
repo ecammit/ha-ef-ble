@@ -18,6 +18,7 @@ from ..props.protobuf_field import TransformIfMissing
 pb_time = proto_attr_mapper(pd303_pb2.ProtoTime)
 pb_push_set = proto_attr_mapper(pd303_pb2.ProtoPushAndSet)
 
+
 class PowerStatus(IntFieldValue):
     UNKNOWN = -1
 
@@ -26,6 +27,7 @@ class PowerStatus(IntFieldValue):
     OIL_POWER = 2
     EMERGENCY_STOP = 3
     OFF_POWER = 4
+
 
 class ControlStatus(IntFieldValue):
     UNKNOWN = -1
@@ -51,6 +53,7 @@ class PVStatus(IntFieldValue):
     LV = 1
     HV = 2
     LV_AND_HV = 3
+
 
 class ChannelStatus(IntFieldValue):
     UNKNOWN = -1
@@ -504,7 +507,11 @@ class Device(DeviceBase, ProtobufProps):
     async def set_circuit_power(self, circuit_id, enable):
         """Send command to power on / off the specific circuit of the panel"""
         self._logger.debug(
-            "%s: %s: setCircuitPower for %d: %s", self.address, self.name, circuit_id, enable
+            "%s: %s: setCircuitPower for %d: %s",
+            self.address,
+            self.name,
+            circuit_id,
+            enable,
         )
 
         ppas = pd303_pb2.ProtoPushAndSet()
@@ -530,16 +537,16 @@ class Device(DeviceBase, ProtobufProps):
 
     async def set_channel_enable(self, channel_id, value: bool):
         self._logger.warning(
-            "%s: %s: set_channel_enable: %d %s", self.address, self.name, channel_id, value
+            "%s: %s: set_channel_enable: %d %s",
+            self.address,
+            self.name,
+            channel_id,
+            value,
         )
         ppas = pd303_pb2.ProtoPushAndSet()
-        sta = getattr(
-            ppas.backup_incre_info, "Energy" + str(channel_id) + "_info"
-        )
-        sta.is_enable = (
-            ChannelStatus.ENABLED if value else ChannelStatus.DISABLED
-        )
-        #setattr(ppas, "ch" + str(channel_id) + "_enable_set", ChannelStatus.ENABLED if value else ChannelStatus.DISABLED)
+        sta = getattr(ppas.backup_incre_info, "Energy" + str(channel_id) + "_info")
+        sta.is_enable = ChannelStatus.ENABLED if value else ChannelStatus.DISABLED
+
         await self._send_config_packet(ppas)
         return True
 

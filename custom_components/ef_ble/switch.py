@@ -1,7 +1,7 @@
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from functools import partial
-from typing import Any, Callable
+from typing import Any
 
 from homeassistant.components.switch import (
     SwitchDeviceClass,
@@ -16,9 +16,11 @@ from .eflib import DeviceBase
 from .eflib.devices import shp2
 from .entity import EcoflowEntity
 
+
 @dataclass(frozen=True, kw_only=True)
 class EcoflowSwitchEntityDescription[Device: DeviceBase](SwitchEntityDescription):
     enable: Callable[[Device, bool], Awaitable[None]] | None = None
+
 
 SWITCH_TYPES = [
     SwitchEntityDescription(
