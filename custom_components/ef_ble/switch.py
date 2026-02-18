@@ -145,6 +145,17 @@ SWITCH_TYPES = [
         )
         for i in range(1, shp2.Device.NUM_OF_CIRCUITS + 1)
     ],
+    # SHP2 Channels switches
+    *[
+        EcoflowSwitchEntityDescription[shp2.Device](
+            key=f"channel{i}_is_enabled",
+            name=f"Channel {i} enable",
+            device_class=SwitchDeviceClass.SWITCH,
+            icon="mdi:power-settings",
+            enable=lambda device, enabled, i=i: device.set_channel_enable(i, enabled),
+        )
+        for i in range(shp2.Device.NUM_OF_CHANNELS)
+    ],
 ]
 
 

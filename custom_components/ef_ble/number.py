@@ -26,6 +26,7 @@ from .eflib.devices import (
     delta_pro_3,
     river2,
     river3,
+    shp2,
     smart_generator,
     smart_generator_4k,
     stream_ac,
@@ -283,6 +284,18 @@ NUMBER_TYPES: list[EcoflowNumberEntityDescription] = [
         async_set_native_value=(
             lambda device, value: device.set_feed_grid_mode_pow_limit(int(value))
         ),
+    ),
+    EcoflowNumberEntityDescription[shp2.Device](
+        key="backup_battery_level",
+        name="Backup Reserve",
+        icon="mdi:battery-sync",
+        device_class=NumberDeviceClass.BATTERY,
+        native_unit_of_measurement=PERCENTAGE,
+        native_step=1.0,
+        async_set_native_value=(
+            lambda device, value: device.set_backup_battery_level(int(value))
+        ),
+        availability_prop="backup_reserve",
     ),
 ]
 
