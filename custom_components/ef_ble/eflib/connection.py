@@ -647,8 +647,8 @@ class Connection:
                 # Check the packet CRC16
                 if crc16(header + payload_data) != struct.unpack("<H", payload_crc)[0]:
                     error_msg = "Unable to parse encrypted packet - incorrect CRC16: %r"
-                    self._logger.error(error_msg, bytearray(payload_data).hex())
-                    self._last_errors.append(error_msg % bytearray(payload_data).hex())
+                    self._logger.error(error_msg, bytearray(data).hex())
+                    self._last_errors.append(error_msg % bytearray(data).hex())
                     raise PacketParseError  # noqa: TRY301
 
                 # Decrypt the payload packet
