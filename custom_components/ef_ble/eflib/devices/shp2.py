@@ -532,6 +532,13 @@ class Device(DeviceBase, ProtobufProps):
             pd303_pb2.LOAD_CH_POWER_ON if enable else pd303_pb2.LOAD_CH_POWER_OFF
         )
         sta.ctrl_mode = pd303_pb2.RLY_HAND_CTRL_MODE
+        sta2 = getattr(
+            ppas.load_incre_info.hall1_incre_info, "ch" + str(circuit_id + 3) + "_sta"
+        )
+        sta2.load_sta = (
+            pd303_pb2.LOAD_CH_POWER_ON if enable else pd303_pb2.LOAD_CH_POWER_OFF
+        )
+        sta2.ctrl_mode = pd303_pb2.RLY_HAND_CTRL_MODE
         payload = ppas.SerializeToString()
         packet = Packet(0x21, 0x0B, 0x0C, 0x21, payload, 0x01, 0x01, 0x13)
 
