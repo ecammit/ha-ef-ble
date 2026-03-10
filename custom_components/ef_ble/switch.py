@@ -190,6 +190,14 @@ class EcoflowSwitchEntity(EcoflowEntity, SwitchEntity):
         else:
             self._update_state_func = getattr(self._device, f"enable_{self._prop_name}")
 
+        self._available_func = None
+        if (
+            isinstance(self.entity_description, EcoflowSwitchEntityDescription)
+            and self.entity_description.available is not None
+        ):
+            self._available_func = partial(self.entity_description.available, device)
+
+
         if entity_description.translation_key is None:
             self._attr_translation_key = self.entity_description.key
 
@@ -214,9 +222,7 @@ class EcoflowSwitchEntity(EcoflowEntity, SwitchEntity):
             self._device.is_connected
             and self._on_off_state is not None
             and (
-                not isinstance(self.entity_description, EcoflowSwitchEntityDescription)
-                or not getattr(self.entity_description, "available", None) is not None
-                or self.entity_description.available(self._device)
+                self._available_func is None or self._available_func()
             )
         )
 

@@ -32,6 +32,8 @@ class ControlStatus(IntFieldValue):
 class ForceChargeStatus(IntFieldValue):
     UNKNOWN = -1
 
+    OFF = 0
+    ON = 1
 
 class CircuitState(IntFieldValue):
     """Circuit state enum (0=OFF, 1=ON)"""
@@ -524,7 +526,7 @@ class Device(DeviceBase, ProtobufProps):
 
     async def set_config_flag(self, enable):
         """Send command to enable/disable sending config data from device to the host"""
-        self._logger.debug("%s: setConfigFlag: %s", self._address, enable)
+        self._logger.debug("setConfigFlag: %s", enable)
 
         ppas = pd303_pb2.ProtoPushAndSet()
         ppas.is_get_cfg_flag = enable
@@ -536,21 +538,19 @@ class Device(DeviceBase, ProtobufProps):
     async def set_circuit_power(self, circuit_id, enable):
         """Send command to power on / off the specific circuit of the panel"""
         self._logger.debug(
-            "%s: setCircuitPower for %d: %s", self._address, circuit_id, enable
+            "setCircuitPower for %d: %s", circuit_id, enable
         )
         is_split = getattr(self, f"circuit_{circuit_id}_is_split", None)
         split_link = getattr(self, f"circuit_{circuit_id}_split_link", None)
         if is_split is None or split_link is None:
             self._logger.warning(
-                "%s: Cannot set circuit power for circuit %d because split circuit info is not available",
-                self._address,
+                "Cannot set circuit power for circuit %d because split circuit info is not available",
                 circuit_id,
             )
             return
         if is_split and (split_link < 1 or split_link > self.NUM_OF_CIRCUITS):
             self._logger.warning(
-                "%s: Cannot set circuit power for circuit %d because split link circuit id %d is invalid",
-                self._address,
+                "Cannot set circuit power for circuit %d because split link circuit id %d is invalid",
                 circuit_id,
                 split_link,
             )
@@ -582,19 +582,16 @@ class Device(DeviceBase, ProtobufProps):
 
     def is_circuit_switch_available(self, circuit_id: int):
         """
-        Circuit switch is available if the device is connected, the state is available, and the circuit is not a split circuit
-           or it's the main circuit of a split circuit (circuit with higher circuit id is the sub circuit)"""
+        Circuit switch is available if the device is connected, the state is available, and we've loaded the
+        split circuit info (is_split and split_link), because without the split circuit info we won't know
+        how to control the circuit properly (whether we also need to control the linked circuit or not)
+        """
+
+        circuit_exists = getattr(self, f"circuit_{circuit_id}", None) is not None
+        split_info_known = getattr(self, f"circuit_{circuit_id}_is_split", None) is not None and getattr(self, f"circuit_{circuit_id}_split_link", None) is not None
+
         return (
             self.is_connected
-            and getattr(self, f"circuit_{circuit_id}", None) is not None
-            and getattr(self, f"circuit_{circuit_id}_is_split", None) is not None
-            and getattr(self, f"circuit_{circuit_id}_split_link", None) is not None
-            and (
-                getattr(self, f"circuit_{circuit_id}_is_split") is False
-                or getattr(self, f"circuit_{circuit_id}_split_link") > circuit_id
-            )
+            and circuit_exists
+            and split_info_known
         )
-
-    def get_circuit_switch_additional_properties(self, circuit_id: int):
-        """Get the list of additional device properties to listen for state updates for the circuit switch (e.g. split circuit info)"""
-        return [f"circuit_{circuit_id}_is_split", f"circuit_{circuit_id}_split_link"]
