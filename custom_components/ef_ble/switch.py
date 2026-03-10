@@ -197,7 +197,6 @@ class EcoflowSwitchEntity(EcoflowEntity, SwitchEntity):
         ):
             self._available_func = partial(self.entity_description.available, device)
 
-
         if entity_description.translation_key is None:
             self._attr_translation_key = self.entity_description.key
 
@@ -221,9 +220,7 @@ class EcoflowSwitchEntity(EcoflowEntity, SwitchEntity):
         return (
             self._device.is_connected
             and self._on_off_state is not None
-            and (
-                self._available_func is None or self._available_func()
-            )
+            and (self._available_func is None or self._available_func())
         )
 
     @property

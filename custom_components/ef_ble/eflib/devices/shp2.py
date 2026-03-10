@@ -35,6 +35,7 @@ class ForceChargeStatus(IntFieldValue):
     OFF = 0
     ON = 1
 
+
 class CircuitState(IntFieldValue):
     """Circuit state enum (0=OFF, 1=ON)"""
 
@@ -85,12 +86,6 @@ def _errors(error_codes: pd303_pb2.ErrCode):
     return [e for e in error_codes.err_code if e != b"\x00\x00\x00\x00\x00\x00\x00\x00"]
 
 
-def _is_circuit_on(v):
-    return CircuitState.from_value(v) is CircuitState.ON if v is not None else False
-
-
-_is_circuit_on_missing = TransformIfMissing(_is_circuit_on)
-
 _hall1_incre_info = pb_push_set.load_incre_info.hall1_incre_info
 
 
@@ -132,18 +127,18 @@ class Device(DeviceBase, ProtobufProps):
     circuit_current_12 = CircuitCurrentField(11)
 
     # Circuit state properties (on/off control)
-    circuit_1 = pb_field(_hall1_incre_info.ch1_sta.load_sta, _is_circuit_on_missing)
-    circuit_2 = pb_field(_hall1_incre_info.ch2_sta.load_sta, _is_circuit_on_missing)
-    circuit_3 = pb_field(_hall1_incre_info.ch3_sta.load_sta, _is_circuit_on_missing)
-    circuit_4 = pb_field(_hall1_incre_info.ch4_sta.load_sta, _is_circuit_on_missing)
-    circuit_5 = pb_field(_hall1_incre_info.ch5_sta.load_sta, _is_circuit_on_missing)
-    circuit_6 = pb_field(_hall1_incre_info.ch6_sta.load_sta, _is_circuit_on_missing)
-    circuit_7 = pb_field(_hall1_incre_info.ch7_sta.load_sta, _is_circuit_on_missing)
-    circuit_8 = pb_field(_hall1_incre_info.ch8_sta.load_sta, _is_circuit_on_missing)
-    circuit_9 = pb_field(_hall1_incre_info.ch9_sta.load_sta, _is_circuit_on_missing)
-    circuit_10 = pb_field(_hall1_incre_info.ch10_sta.load_sta, _is_circuit_on_missing)
-    circuit_11 = pb_field(_hall1_incre_info.ch11_sta.load_sta, _is_circuit_on_missing)
-    circuit_12 = pb_field(_hall1_incre_info.ch12_sta.load_sta, _is_circuit_on_missing)
+    circuit_1 = pb_field(_hall1_incre_info.ch1_sta.load_sta, CircuitState.from_value)
+    circuit_2 = pb_field(_hall1_incre_info.ch2_sta.load_sta, CircuitState.from_value)
+    circuit_3 = pb_field(_hall1_incre_info.ch3_sta.load_sta, CircuitState.from_value)
+    circuit_4 = pb_field(_hall1_incre_info.ch4_sta.load_sta, CircuitState.from_value)
+    circuit_5 = pb_field(_hall1_incre_info.ch5_sta.load_sta, CircuitState.from_value)
+    circuit_6 = pb_field(_hall1_incre_info.ch6_sta.load_sta, CircuitState.from_value)
+    circuit_7 = pb_field(_hall1_incre_info.ch7_sta.load_sta, CircuitState.from_value)
+    circuit_8 = pb_field(_hall1_incre_info.ch8_sta.load_sta, CircuitState.from_value)
+    circuit_9 = pb_field(_hall1_incre_info.ch9_sta.load_sta, CircuitState.from_value)
+    circuit_10 = pb_field(_hall1_incre_info.ch10_sta.load_sta, CircuitState.from_value)
+    circuit_11 = pb_field(_hall1_incre_info.ch11_sta.load_sta, CircuitState.from_value)
+    circuit_12 = pb_field(_hall1_incre_info.ch12_sta.load_sta, CircuitState.from_value)
 
     circuit_1_is_split = pb_field(_hall1_incre_info.ch1_info.splitphase.link_mark)
     circuit_2_is_split = pb_field(_hall1_incre_info.ch2_info.splitphase.link_mark)
@@ -537,9 +532,7 @@ class Device(DeviceBase, ProtobufProps):
 
     async def set_circuit_power(self, circuit_id, enable):
         """Send command to power on / off the specific circuit of the panel"""
-        self._logger.debug(
-            "setCircuitPower for %d: %s", circuit_id, enable
-        )
+        self._logger.debug("setCircuitPower for %d: %s", circuit_id, enable)
         is_split = getattr(self, f"circuit_{circuit_id}_is_split", None)
         split_link = getattr(self, f"circuit_{circuit_id}_split_link", None)
         if is_split is None or split_link is None:
@@ -588,10 +581,9 @@ class Device(DeviceBase, ProtobufProps):
         """
 
         circuit_exists = getattr(self, f"circuit_{circuit_id}", None) is not None
-        split_info_known = getattr(self, f"circuit_{circuit_id}_is_split", None) is not None and getattr(self, f"circuit_{circuit_id}_split_link", None) is not None
-
-        return (
-            self.is_connected
-            and circuit_exists
-            and split_info_known
+        split_info_known = (
+            getattr(self, f"circuit_{circuit_id}_is_split", None) is not None
+            and getattr(self, f"circuit_{circuit_id}_split_link", None) is not None
         )
+
+        return self.is_connected and circuit_exists and split_info_known
