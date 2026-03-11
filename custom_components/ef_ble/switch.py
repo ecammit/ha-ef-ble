@@ -135,6 +135,14 @@ SWITCH_TYPES = [
         key="emergency_reverse_charging",
         name="Emergency Reverse Charging",
     ),
+    EcoflowSwitchEntityDescription[shp2.Device](
+        key="eps_mode",
+        name="EPS Mode",
+        translation_key="eps_mode",
+        device_class=SwitchDeviceClass.SWITCH,
+        icon="mdi:home-battery",
+        set_state=lambda device, value: device.set_eps_mode(value),
+    ),
     # SHP2 Circuit switches
     *[
         EcoflowSwitchEntityDescription[shp2.Device](
@@ -148,6 +156,37 @@ SWITCH_TYPES = [
             availability_prop=f"circuit_{i}_split_info_loaded",
         )
         for i in range(1, shp2.Device.NUM_OF_CIRCUITS + 1)
+    ],
+    # SHP2 Channels switches
+    *[
+        EcoflowSwitchEntityDescription[shp2.Device](
+            key=f"channel{i}_is_enabled",
+            name=f"Channel {i}",
+            translation_key="channel_is_enabled",
+            translation_placeholders={"channel": f"{i}"},
+            device_class=SwitchDeviceClass.SWITCH,
+            icon="mdi:power-settings",
+            set_state=lambda device, enabled, i=i: device.set_channel_enable(
+                i, enabled
+            ),
+            availability_prop=f"channel{i}_is_connected",
+        )
+        for i in range(1, shp2.Device.NUM_OF_CHANNELS + 1)
+    ],
+    *[
+        EcoflowSwitchEntityDescription[shp2.Device](
+            key=f"ch{i}_force_charge",
+            name=f"Channel {i} Force Charge",
+            translation_key="ch_force_charge",
+            translation_placeholders={"channel": f"{i}"},
+            device_class=SwitchDeviceClass.SWITCH,
+            icon="mdi:battery-charging-high",
+            set_state=lambda device, enabled, i=i: device.set_channel_force_charge(
+                i, enabled
+            ),
+            availability_prop=f"channel{i}_is_connected",
+        )
+        for i in range(1, shp2.Device.NUM_OF_CHANNELS + 1)
     ],
 ]
 
