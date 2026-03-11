@@ -20,7 +20,7 @@ from .entity import EcoflowEntity
 @dataclass(frozen=True, kw_only=True)
 class EcoflowSwitchEntityDescription[Device: DeviceBase](SwitchEntityDescription):
     enable: Callable[[Device, bool], Awaitable[None]] | None = None
-    available: Callable[[Device], bool] | None = None
+    availability_prop: str | None = None
 
 
 SWITCH_TYPES = [
@@ -139,11 +139,13 @@ SWITCH_TYPES = [
     *[
         EcoflowSwitchEntityDescription[shp2.Device](
             key=f"circuit_{i}",
-            name=f"Circuit {i:02}",
+            name=f"Circuit {i}",
+            translation_key="circuit_is_enabled",
+            translation_placeholders={"circuit": f"{i}"},
             device_class=SwitchDeviceClass.OUTLET,
             icon="mdi:power-socket-us",
             enable=lambda device, enabled, i=i: device.set_circuit_power(i, enabled),
-            available=lambda device, i=i: device.is_circuit_switch_available(i),
+            availability_prop=f"circuit_{i}_split_info_loaded",
         )
         for i in range(1, shp2.Device.NUM_OF_CIRCUITS + 1)
     ],
@@ -181,6 +183,7 @@ class EcoflowSwitchEntity(EcoflowEntity, SwitchEntity):
         self._prop_name = entity_description.key
         self.entity_description = entity_description
         self._on_off_state = None
+        self._availability_prop = getattr(entity_description, "availability_prop", None)
 
         if (
             isinstance(entity_description, EcoflowSwitchEntityDescription)
@@ -190,15 +193,14 @@ class EcoflowSwitchEntity(EcoflowEntity, SwitchEntity):
         else:
             self._update_state_func = getattr(self._device, f"enable_{self._prop_name}")
 
-        self._available_func = None
-        if (
-            isinstance(self.entity_description, EcoflowSwitchEntityDescription)
-            and self.entity_description.available is not None
-        ):
-            self._available_func = partial(self.entity_description.available, device)
-
         if entity_description.translation_key is None:
             self._attr_translation_key = self.entity_description.key
+
+        self._register_update_callback(
+            entity_attr="_attr_available",
+            prop_name=self._availability_prop,
+            get_state=lambda state: state if state is not None else self.SkipWrite,
+        )
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self._update_state_func(True)
@@ -209,19 +211,38 @@ class EcoflowSwitchEntity(EcoflowEntity, SwitchEntity):
     async def async_added_to_hass(self) -> None:
         self._device.register_state_update_callback(self.state_updated, self._prop_name)
         await super().async_added_to_hass()
+        if self._availability_prop is not None:
+            self._device.register_state_update_callback(
+                self.availability_updated,
+                self._availability_prop,
+            )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Entity being removed from hass."""
+        await super().async_will_remove_from_hass()
+        if self._availability_prop is not None:
+            self._device.remove_state_update_calback(
+                self.availability_updated,
+                self._availability_prop,
+            )
 
     @callback
     def state_updated(self, state: bool | None):
         self._on_off_state = state
         self.async_write_ha_state()
 
+    @callback
+    def availability_updated(self, state: bool):
+        self._attr_available = state
+        self.async_write_ha_state()
+
     @property
     def available(self):
-        return (
-            self._device.is_connected
-            and self._on_off_state is not None
-            and (self._available_func is None or self._available_func())
-        )
+        if not super().available or self._on_off_state is None:
+            return False
+        if self._availability_prop is not None:
+            return self._attr_available
+        return True
 
     @property
     def is_on(self):
