@@ -536,7 +536,7 @@ class Device(DeviceBase, ProtobufProps):
         await self._send_config_packet(ppas)
         return True
 
-    async def set_circuit_power(self, circuit_id, enable):
+    async def set_circuit_power(self, circuit_id: int, enable: bool):
         """Send command to power on / off the specific circuit of the panel"""
         self._logger.debug("setCircuitPower for %d: %s", circuit_id, enable)
 
