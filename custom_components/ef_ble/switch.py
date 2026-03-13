@@ -185,7 +185,7 @@ class EcoflowSwitchEntity(EcoflowEntity, SwitchEntity):
         self._prop_name = entity_description.key
         self._set_state = getattr(device, f"enable_{self._prop_name}", None)
         self.entity_description = entity_description
-        self._on_off_state = None
+        self._on_off_state = getattr(device, self._prop_name, None)
         self._availability_prop = getattr(entity_description, "availability_prop", None)
 
         if entity_description.translation_key is None:
