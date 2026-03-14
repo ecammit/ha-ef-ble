@@ -163,10 +163,10 @@ async def async_setup_entry(
         EcoflowSwitchEntity(device, switch_desc)
         for switch_desc in SWITCH_TYPES
         if (
-            isinstance(switch_desc, EcoflowSwitchEntityDescription)
-            or (
-                hasattr(device, switch_desc.key)
-                and hasattr(device, f"enable_{switch_desc.key}")
+            hasattr(device, switch_desc.key)
+            and (
+                isinstance(switch_desc, EcoflowSwitchEntityDescription)
+                or hasattr(device, f"enable_{switch_desc.key}")
             )
         )
     ]
