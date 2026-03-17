@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from dataclasses import dataclass
 
 from bleak.backends.device import BLEDevice
 from bleak.backends.scanner import AdvertisementData
@@ -32,7 +31,6 @@ def flow_is_on(x):
     return (int(x) & 0b11) in [0b10, 0b11]
 
 
-@dataclass(unsafe_hash=True)
 class _DcChargingMaxField(
     repeated_pb_field_type(
         list_field=pb.plug_in_info_pv_chg_max_list.pv_chg_max_item,
@@ -46,7 +44,6 @@ class _DcChargingMaxField(
         return item.pv_chg_amp_max if item.pv_chg_vol_type == self.vol_type else None
 
 
-@dataclass(unsafe_hash=True)
 class _DcAmpSettingField(
     repeated_pb_field_type(
         list_field=pb.pv_dc_chg_setting_list.list_info,
