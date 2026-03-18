@@ -104,10 +104,10 @@ _hall1 = pb_push_set.load_incre_info.hall1_incre_info
 _channel_pb = pb_push_set.backup_incre_info.ch1_info
 _energy = pb_push_set.backup_incre_info.Energy1_info
 
-_circuit_sta_group = pb_group(match="ch{n}_sta")
-_circuit_info_group = pb_group(match="ch{n}_info")
-_channel_group = pb_group(match="ch{n}_info", name_prefix="ch{n}")
-_energy_group = pb_group(match="Energy{n}_info", name_prefix="channel{n}")
+_circuit_sta_group = pb_group("ch{n}_sta")
+_circuit_info_group = pb_group("ch{n}_info")
+_channel_group = pb_group("ch{n}_info", name_prefix="ch{n}")
+_energy_group = pb_group("Energy{n}_info", name_prefix="channel{n}")
 
 
 class Device(DeviceBase, ProtobufProps):
@@ -320,7 +320,7 @@ class Device(DeviceBase, ProtobufProps):
         ppas = pd303_pb2.ProtoPushAndSet()
         load_sta = pd303_pb2.LOAD_CH_POWER_ON if enable else pd303_pb2.LOAD_CH_POWER_OFF
         ch_sta = pb_indexed_attr(
-            ppas, pb_push_set.load_incre_info.hall1_incre_info.ch1_sta
+            ppas, pb_push_set.load_incre_info.hall1_incre_info.ch1_sta, "ch{n}_sta"
         )
 
         sta = ch_sta[circuit_id]
@@ -350,7 +350,9 @@ class Device(DeviceBase, ProtobufProps):
         self._logger.debug("set_channel_enable: %d %s", channel_id, value)
 
         ppas = pd303_pb2.ProtoPushAndSet()
-        ch_enable = pb_indexed_attr(ppas, pb_push_set.ch1_enable_set)
+        ch_enable = pb_indexed_attr(
+            ppas, pb_push_set.ch1_enable_set, "ch{n}_enable_set"
+        )
         ch_enable[channel_id] = (
             ChannelSetStatus.ENABLE if value else ChannelSetStatus.DISABLE
         )
@@ -362,7 +364,9 @@ class Device(DeviceBase, ProtobufProps):
         self._logger.debug("set_channel_force_charge: %d %s", channel_id, value)
 
         ppas = pd303_pb2.ProtoPushAndSet()
-        ch_force = pb_indexed_attr(ppas, pb_push_set.ch1_force_charge)
+        ch_force = pb_indexed_attr(
+            ppas, pb_push_set.ch1_force_charge, "ch{n}_force_charge"
+        )
         ch_force[channel_id] = (
             pd303_pb2.FORCE_CHARGE_ON if value else pd303_pb2.FORCE_CHARGE_OFF
         )
@@ -386,7 +390,9 @@ class Device(DeviceBase, ProtobufProps):
             for channel_id in range(1, self.NUM_OF_CHANNELS + 1):
                 if self.ch_force_charge[channel_id]:
                     ch_info = pb_indexed_attr(
-                        ppas, pb_push_set.backup_incre_info.ch1_info
+                        ppas,
+                        pb_push_set.backup_incre_info.ch1_info,
+                        "ch{n}_info",
                     )
                     ch_info[channel_id].force_charge_sta = pd303_pb2.FORCE_CHARGE_OFF
 

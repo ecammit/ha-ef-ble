@@ -334,24 +334,6 @@ def pb_group(
     return _PbGroupFactory(match, name_prefix=name_prefix)
 
 
-def _find_indexed_segment(attr: _ProtoAttr) -> tuple[int, str]:
-    descriptor = attr.message_type.DESCRIPTOR
-
-    for seg_idx, seg_name in enumerate(attr.attrs):
-        for m in re.finditer(r"\d+", seg_name):
-            candidate = seg_name[: m.start()] + "{n}" + seg_name[m.end() :]
-            regex = _match_to_regex(candidate)
-            siblings = [n for n in descriptor.fields_by_name if regex.match(n)]
-            if len(siblings) > 1:
-                return seg_idx, candidate
-
-        field_desc = descriptor.fields_by_name.get(seg_name)
-        if field_desc is not None and field_desc.message_type is not None:
-            descriptor = field_desc.message_type
-
-    raise ValueError(f"No indexed segment found in protobuf path {attr.attrs}")
-
-
 @dataclass(slots=True)
 class _PbIndexedAccessor[T]:
     msg: Any
@@ -377,13 +359,12 @@ class _PbIndexedAccessor[T]:
         setattr(msg, attrs[-1], value)
 
 
-def pb_indexed_attr[T](msg: Any, attr: T) -> _PbIndexedAccessor[T]:
+def pb_indexed_attr[T](msg: Any, attr: T, match: str) -> _PbIndexedAccessor[T]:
     """
     Create an indexed view over a protobuf message using a typed path
 
-    The indexed segment is auto-discovered by scanning for path segments that have
-    numbered siblings in the protobuf descriptor. Use [index] on the result to traverse
-    the message with that index substituted.
+    Use [index] on the result to traverse the message with that index substituted
+    into the matched segment.
 
     Parameters
     ----------
@@ -392,11 +373,14 @@ def pb_indexed_attr[T](msg: Any, attr: T) -> _PbIndexedAccessor[T]:
     attr
         A typed protobuf path from `proto_attr_mapper`, e.g.
         `pb_push_set.load_incre_info.hall1_incre_info.ch1_sta`
+    match
+        Pattern with {n} placeholder identifying the indexed segment, e.g. "ch{n}_sta"
     """
     if not isinstance(attr, _ProtoAttr):
         raise TypeError(
             "Second argument must be a protobuf path from "
             f"`proto_attr_mapper`, got {type(attr)}"
         )
-    match_idx, match = _find_indexed_segment(attr)
+    regex = _match_to_regex(match)
+    match_idx = _find_match_segment(attr, regex)
     return _PbIndexedAccessor(msg, list(attr.attrs), match_idx, match)
