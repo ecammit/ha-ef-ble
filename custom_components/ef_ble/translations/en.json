@@ -760,6 +760,30 @@
       },
       "dc_input_current": {
         "name": "DC Input Current"
+      },
+      "hv_solar_power": {
+        "name": "HV Solar Power"
+      },
+      "hv_solar_voltage": {
+        "name": "HV Solar Voltage"
+      },
+      "hv_solar_current": {
+        "name": "HV Solar Current"
+      },
+      "hv_solar_temperature": {
+        "name": "HV Solar Temperature"
+      },
+      "lv_solar_power": {
+        "name": "LV Solar Power"
+      },
+      "lv_solar_voltage": {
+        "name": "LV Solar Voltage"
+      },
+      "lv_solar_current": {
+        "name": "LV Solar Current"
+      },
+      "lv_solar_temperature": {
+        "name": "LV Solar Temperature"
       }
     },
     "select": {

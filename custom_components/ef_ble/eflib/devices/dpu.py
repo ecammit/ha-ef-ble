@@ -12,6 +12,9 @@ from ..props import (
 )
 
 pb_heartbeat = proto_attr_mapper(yj751_sys_pb2.AppShowHeartbeatReport)
+pb_backend_record_heartbeat = proto_attr_mapper(
+    yj751_sys_pb2.BackendRecordHeartbeatReport
+)
 pb_bp_info = proto_attr_mapper(yj751_sys_pb2.BpInfoReport)
 
 
@@ -47,6 +50,26 @@ class Device(DeviceBase, ProtobufProps):
 
     lv_solar_power = pb_field(pb_heartbeat.in_lv_mppt_pwr, lambda x: round(x, 2))
     hv_solar_power = pb_field(pb_heartbeat.in_hv_mppt_pwr, lambda x: round(x, 2))
+
+    # solar diagnostics from BackendRecordHeartbeatReport
+    lv_solar_voltage = pb_field(
+        pb_backend_record_heartbeat.in_lv_mppt_vol, lambda x: round(x, 2)
+    )
+    lv_solar_current = pb_field(
+        pb_backend_record_heartbeat.in_lv_mppt_amp, lambda x: round(x, 2)
+    )
+    lv_solar_temperature = pb_field(
+        pb_backend_record_heartbeat.mppt_lv_temp, lambda x: round(x, 2)
+    )
+    hv_solar_voltage = pb_field(
+        pb_backend_record_heartbeat.in_hv_mppt_vol, lambda x: round(x, 2)
+    )
+    hv_solar_current = pb_field(
+        pb_backend_record_heartbeat.in_hv_mppt_amp, lambda x: round(x, 2)
+    )
+    hv_solar_temperature = pb_field(
+        pb_backend_record_heartbeat.mppt_hv_temp, lambda x: round(x, 2)
+    )
 
     input_power = pb_field(pb_heartbeat.watts_in_sum)
     output_power = pb_field(pb_heartbeat.watts_out_sum)

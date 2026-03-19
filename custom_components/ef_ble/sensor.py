@@ -488,7 +488,41 @@ _SENSORS: Final[dict[str, SensorEntityDescription]] = {
     ),
     # DPU
     "lv_solar_power": port_power("LV Solar", precision=2),
+    "lv_solar_voltage": voltage(
+        key="lv_solar_voltage",
+        precision=2,
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "lv_solar_current": current(
+        key="lv_solar_current",
+        precision=2,
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "lv_solar_temperature": temperature(
+        key="lv_solar_temperature",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
     "hv_solar_power": port_power("HV Solar", precision=2),
+    "hv_solar_voltage": voltage(
+        key="hv_solar_voltage",
+        precision=2,
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "hv_solar_current": current(
+        key="hv_solar_current",
+        precision=2,
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "hv_solar_temperature": temperature(
+        key="hv_solar_temperature",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
     "ac_l1_1_out_power": port_power("AC L1 1 Out", precision=2),
     "ac_l1_2_out_power": port_power("AC L1 2 Out", precision=2),
     "ac_l2_1_out_power": port_power("AC L2 1 Out", precision=2),
