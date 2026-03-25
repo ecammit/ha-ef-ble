@@ -89,8 +89,12 @@ class Device(DeviceBase, ProtobufProps):
         return packet.src == src and packet.cmdSet == cmsSet and packet.cmdId == cmdId
 
     @staticmethod
-    def round2(x: float) -> float:
-        return round(x, 2)
+    def round2(x: float | None) -> float | None:
+        return None if x is None else round(x, 2)
+
+    @staticmethod
+    def multiply100(x: float | None) -> float | None:
+        return None if x is None else round(x * 100, 0)
 
     # Bitmap for various binary states and the individual binary states therein
     show_flag = pb_field(pb_heartbeat.show_flag)
@@ -218,32 +222,32 @@ class Device(DeviceBase, ProtobufProps):
     ac_l1_1_out_power = pb_field(pb_heartbeat.out_ac_l1_1_pwr)
     ac_l1_1_out_vol = pb_field(pb_backend_record_heartbeat.out_ac_l1_1_vol, round2)
     ac_l1_1_out_amp = pb_field(pb_backend_record_heartbeat.out_ac_l1_1_amp, round2)
-    ac_l1_1_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_l1_1_pf, round2)
+    ac_l1_1_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_l1_1_pf, multiply100)
 
     ac_l1_2_out_power = pb_field(pb_heartbeat.out_ac_l1_2_pwr)
     ac_l1_2_out_vol = pb_field(pb_backend_record_heartbeat.out_ac_l1_2_vol, round2)
     ac_l1_2_out_amp = pb_field(pb_backend_record_heartbeat.out_ac_l1_2_amp, round2)
-    ac_l1_2_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_l1_2_pf, round2)
+    ac_l1_2_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_l1_2_pf, multiply100)
 
     ac_l2_1_out_power = pb_field(pb_heartbeat.out_ac_l2_1_pwr)
     ac_l2_1_out_vol = pb_field(pb_backend_record_heartbeat.out_ac_l2_1_vol, round2)
     ac_l2_1_out_amp = pb_field(pb_backend_record_heartbeat.out_ac_l2_1_amp, round2)
-    ac_l2_1_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_l2_1_pf, round2)
+    ac_l2_1_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_l2_1_pf, multiply100)
 
     ac_l2_2_out_power = pb_field(pb_heartbeat.out_ac_l2_2_pwr)
     ac_l2_2_out_vol = pb_field(pb_backend_record_heartbeat.out_ac_l2_2_vol, round2)
     ac_l2_2_out_amp = pb_field(pb_backend_record_heartbeat.out_ac_l2_2_amp, round2)
-    ac_l2_2_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_l2_2_pf, round2)
+    ac_l2_2_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_l2_2_pf, multiply100)
 
     ac_tt_out_power = pb_field(pb_heartbeat.out_ac_tt_pwr)
     ac_tt_out_vol = pb_field(pb_backend_record_heartbeat.out_ac_tt_vol, round2)
     ac_tt_out_amp = pb_field(pb_backend_record_heartbeat.out_ac_tt_amp, round2)
-    ac_tt_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_tt_pf, round2)
+    ac_tt_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_tt_pf, multiply100)
 
     ac_l14_out_power = pb_field(pb_heartbeat.out_ac_l14_pwr)
     ac_l14_out_vol = pb_field(pb_backend_record_heartbeat.out_ac_l14_vol, round2)
     ac_l14_out_amp = pb_field(pb_backend_record_heartbeat.out_ac_l14_amp, round2)
-    ac_l14_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_l14_pf, round2)
+    ac_l14_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_l14_pf, multiply100)
 
     ac_5p8_out_type = pb_field(
         pb_heartbeat.access_5p8_out_type, Access5p8OutputType.from_value
@@ -251,7 +255,7 @@ class Device(DeviceBase, ProtobufProps):
     ac_5p8_out_power = pb_field(pb_heartbeat.out_ac_5p8_pwr)
     ac_5p8_out_vol = pb_field(pb_backend_record_heartbeat.out_ac_5p8_vol, round2)
     ac_5p8_out_amp = pb_field(pb_backend_record_heartbeat.out_ac_5p8_amp, round2)
-    ac_5p8_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_5p8_pf, round2)
+    ac_5p8_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_5p8_pf, multiply100)
 
     backup_discharge_limit = pb_field(pb_app_para_heartbeat.dsg_min_soc)
     backup_discharge_limit_min = 0

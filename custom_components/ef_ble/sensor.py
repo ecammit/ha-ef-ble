@@ -99,7 +99,7 @@ def power_factor(
     key: str = "",
     *,
     enabled: bool = False,
-    precision: int | None = 2,
+    precision: int | None = 0,
     **kwargs: Unpack[_SensorKwargs],
 ) -> EcoflowSensorEntityDescription:
     return EcoflowSensorEntityDescription(
@@ -407,7 +407,7 @@ def port_power_factor(
     name: str,
     *,
     enabled: bool = False,
-    precision: int | None = 2,
+    precision: int | None = 0,
     **kwargs: Unpack[_SensorKwargs],
 ) -> EcoflowSensorEntityDescription:
     return power_factor(
