@@ -36,6 +36,7 @@ from .eflib.exceptions import AuthErrors
 from .eflib.logging_util import ConnectionLog
 
 PLATFORMS: list[Platform] = [
+    Platform.BUTTON,
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
     Platform.SWITCH,

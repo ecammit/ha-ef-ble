@@ -27,6 +27,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+from custom_components.ef_ble.eflib.devices import dpu
+
 from . import DeviceConfigEntry
 from .const import CONF_EXTRA_BATTERY, DOMAIN
 from .eflib import DeviceBase
@@ -87,6 +89,25 @@ def power(
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=state_class,
+        suggested_display_precision=precision,
+        entity_registry_enabled_default=enabled,
+        **kwargs,
+    )
+
+
+def power_factor(
+    key: str = "",
+    *,
+    enabled: bool = False,
+    precision: int | None = 2,
+    **kwargs: Unpack[_SensorKwargs],
+) -> EcoflowSensorEntityDescription:
+    return EcoflowSensorEntityDescription(
+        key=key,
+        native_unit_of_measurement=PERCENTAGE,
+        device_class=SensorDeviceClass.POWER_FACTOR,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
         suggested_display_precision=precision,
         entity_registry_enabled_default=enabled,
         **kwargs,
@@ -333,6 +354,86 @@ def port_power(
     )
 
 
+def port_voltage(
+    name: str,
+    *,
+    enabled: bool = False,
+    precision: int | None = 2,
+    **kwargs: Unpack[_SensorKwargs],
+) -> EcoflowSensorEntityDescription:
+    return voltage(
+        enabled=enabled,
+        precision=precision,
+        translation_key="port_voltage",
+        translation_placeholders={"name": name},
+        entity_category=EntityCategory.DIAGNOSTIC,
+        **kwargs,
+    )
+
+
+def port_current(
+    name: str,
+    *,
+    enabled: bool = False,
+    precision: int | None = 2,
+    **kwargs: Unpack[_SensorKwargs],
+) -> EcoflowSensorEntityDescription:
+    return current(
+        enabled=enabled,
+        precision=precision,
+        translation_key="port_current",
+        translation_placeholders={"name": name},
+        entity_category=EntityCategory.DIAGNOSTIC,
+        **kwargs,
+    )
+
+
+def port_temperature(
+    name: str,
+    *,
+    enabled: bool = False,
+    **kwargs: Unpack[_SensorKwargs],
+) -> EcoflowSensorEntityDescription:
+    return temperature(
+        enabled=enabled,
+        translation_key="port_temperature",
+        translation_placeholders={"name": name},
+        entity_category=EntityCategory.DIAGNOSTIC,
+        **kwargs,
+    )
+
+
+def port_power_factor(
+    name: str,
+    *,
+    enabled: bool = False,
+    precision: int | None = 2,
+    **kwargs: Unpack[_SensorKwargs],
+) -> EcoflowSensorEntityDescription:
+    return power_factor(
+        enabled=enabled,
+        precision=precision,
+        translation_key="port_power_factor",
+        translation_placeholders={"name": name},
+        **kwargs,
+    )
+
+
+def port_error_code(
+    name: str,
+    *,
+    enabled: bool = False,
+    **kwargs: Unpack[_SensorKwargs],
+) -> EcoflowSensorEntityDescription:
+    return raw(
+        enabled=enabled,
+        translation_key="port_error_code",
+        translation_placeholders={"name": name},
+        entity_category=EntityCategory.DIAGNOSTIC,
+        **kwargs,
+    )
+
+
 _shp2_circuit_range = range(1, shp2.Device.NUM_OF_CIRCUITS + 1)
 _shp2_channel_range = range(1, shp2.Device.NUM_OF_CHANNELS + 1)
 
@@ -488,14 +589,165 @@ _SENSORS: Final[dict[str, SensorEntityDescription]] = {
     ),
     # DPU
     "lv_solar_power": port_power("LV Solar", precision=2),
+    "lv_solar_voltage": port_voltage("LV Solar"),
+    "lv_solar_current": port_current("LV Solar"),
+    "lv_solar_temperature": port_temperature("LV Solar"),
+    "lv_solar_err_code": port_error_code("LV Solar"),
     "hv_solar_power": port_power("HV Solar", precision=2),
-    "ac_l1_1_out_power": port_power("AC L1 1 Out", precision=2),
-    "ac_l1_2_out_power": port_power("AC L1 2 Out", precision=2),
-    "ac_l2_1_out_power": port_power("AC L2 1 Out", precision=2),
-    "ac_l2_2_out_power": port_power("AC L2 2 Out", precision=2),
-    "ac_l14_out_power": port_power("AC L14 Out", precision=2),
+    "hv_solar_voltage": port_voltage("HV Solar"),
+    "hv_solar_current": port_current("HV Solar"),
+    "hv_solar_temperature": port_temperature("HV Solar"),
+    "hv_solar_err_code": port_error_code("HV Solar"),
+    "ac_5p8_in_power": port_power("AC 5P8 In", precision=2),
+    "ac_5p8_in_vol": port_voltage("AC 5P8 In"),
+    "ac_5p8_in_amp": port_current("AC 5P8 In"),
+    "ac_5p8_in_type": enum(
+        key="ac_5p8_in_type",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        options=dpu.Access5p8InputType,
+    ),
+    "ac_c20_in_power": port_power("AC C20 In", precision=2),
+    "ac_c20_in_vol": port_voltage("AC C20 In"),
+    "ac_c20_in_amp": port_current("AC C20 In"),
+    "ac_c20_in_type": raw(
+        key="ac_c20_in_type",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "usb1_out_power": port_power("USB (1) Out", precision=2),
+    "usb1_out_vol": port_voltage("USB (1) Out"),
+    "usb1_out_amp": port_current("USB (1) Out"),
+    "usb2_out_power": port_power("USB (2) Out", precision=2),
+    "usb2_out_vol": port_voltage("USB (2) Out"),
+    "usb2_out_amp": port_current("USB (2) Out"),
+    "typec1_out_power": port_power("USB-C (1) Out", precision=2),
+    "typec1_out_vol": port_voltage("USB-C (1) Out"),
+    "typec1_out_amp": port_current("USB-C (1) Out"),
+    "typec2_out_power": port_power("USB-C (2) Out", precision=2),
+    "typec2_out_vol": port_voltage("USB-C (2) Out"),
+    "typec2_out_amp": port_current("USB-C (2) Out"),
+    "ads_out_power": port_power("Anderson Out", precision=2),
+    "ads_out_vol": port_voltage("Anderson Out"),
+    "ads_out_amp": port_current("Anderson Out"),
+    "ads_err_code": port_error_code("Anderson Out"),
+    "ac_l1_1_out_power": port_power("AC L1 (1) Out", precision=2),
+    "ac_l1_1_out_vol": port_voltage("AC L1 (1) Out"),
+    "ac_l1_1_out_amp": port_current("AC L1 (1) Out"),
+    "ac_l1_1_out_pf": port_power_factor("AC L1 (1) Out"),
+    "ac_l1_2_out_power": port_power("AC L1 (2) Out", precision=2),
+    "ac_l1_2_out_vol": port_voltage("AC L1 (2) Out"),
+    "ac_l1_2_out_amp": port_current("AC L1 (2) Out"),
+    "ac_l1_2_out_pf": port_power_factor("AC L1 (2) Out"),
+    "ac_l2_1_out_power": port_power("AC L2 (1) Out", precision=2),
+    "ac_l2_1_out_vol": port_voltage("AC L2 (1) Out"),
+    "ac_l2_1_out_amp": port_current("AC L2 (1) Out"),
+    "ac_l2_1_out_pf": port_power_factor("AC L2 (1) Out"),
+    "ac_l2_2_out_power": port_power("AC L2 (2) Out", precision=2),
+    "ac_l2_2_out_vol": port_voltage("AC L2 (2) Out"),
+    "ac_l2_2_out_amp": port_current("AC L2 (2) Out"),
+    "ac_l2_2_out_pf": port_power_factor("AC L2 (2) Out"),
     "ac_tt_out_power": port_power("AC TT Out", precision=2),
+    "ac_tt_out_vol": port_voltage("AC TT Out"),
+    "ac_tt_out_amp": port_current("AC TT Out"),
+    "ac_tt_out_pf": port_power_factor("AC TT Out"),
+    "ac_l14_out_power": port_power("AC L14 Out", precision=2),
+    "ac_l14_out_vol": port_voltage("AC L14 Out"),
+    "ac_l14_out_amp": port_current("AC L14 Out"),
+    "ac_l14_out_pf": port_power_factor("AC L14 Out"),
     "ac_5p8_out_power": port_power("AC 5P8 Out", precision=2),
+    "ac_5p8_out_vol": port_voltage("AC 5P8 Out"),
+    "ac_5p8_out_amp": port_current("AC 5P8 Out"),
+    "ac_5p8_out_pf": port_power_factor("AC 5P8 Out"),
+    "ac_5p8_out_type": enum(
+        key="ac_5p8_out_type",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        options=dpu.Access5p8OutputType,
+    ),
+    "record_flag": raw(
+        key="record_flag",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "sys_work_sta": raw(
+        key="sys_work_sta",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "chg_reign_sta": raw(
+        key="chg_reign_sta",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "fan_state": raw(
+        key="fan_state",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "work_5p8_mode": raw(
+        key="work_5p8_mode",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "ac_in_freq": frequency(
+        key="ac_in_freq",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "ac_out_freq": frequency(
+        key="ac_out_freq",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "ems_work_sta": raw(
+        key="ems_work_sta",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "ems_max_avail_num": raw(
+        key="ems_max_avail_num",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "ems_open_bms_idx": raw(
+        key="ems_open_bms_idx",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "ems_para_vol_min": port_voltage("EMS Para Min"),
+    "ems_para_vol_max": port_voltage("EMS Para Max"),
+    "bat_vol": port_voltage("Battery"),
+    "bat_amp": port_current("Battery"),
+    "bms_input_watts": port_power(
+        name="BMS Input",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        precision=2,
+    ),
+    "bms_output_watts": port_power(
+        name="BMS Output",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        precision=2,
+    ),
+    "pcs_work_sta": raw(
+        key="pcs_work_sta",
+        enabled=False,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "pcs_dc_temp": port_temperature("PCS DC"),
+    "pcs_dc_err_code": port_error_code("PCS DC"),
+    "pcs_ac_temp": port_temperature("PCS AC"),
+    "pcs_ac_err_code": port_error_code("PCS AC"),
+    "pd_temp": port_temperature("PD"),
+    "ev_max_charger_cur": port_current("EV Max Charger"),
+    "show_flag": raw(
+        key="show_flag",
+        enabled=False,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
     # River 3, Delta 3
     "input_energy": energy(),
     "output_energy": energy(),

@@ -9,6 +9,7 @@ from . import DeviceConfigEntry
 from .eflib import DeviceBase
 from .eflib.devices import (
     alternator_charger,
+    dpu,
     powerstream,
     river2,
     river3,
@@ -155,6 +156,16 @@ SELECT_TYPES: list[EcoflowSelectEntityDescription] = [
             )
         ),
     ),
+    EcoflowSelectEntityDescription[dpu.Device](
+        key="sys_word_mode",
+        options=dpu.OperatingMode.options(include_unknown=False),
+        availability_prop="sys_word_mode_availability",
+        set_state=(
+            lambda device, value: device.set_operating_mode(
+                dpu.OperatingMode[value.upper()]
+            )
+        ),
+    ),
 ]
 
 
@@ -231,7 +242,7 @@ class EcoflowSelect(EcoflowEntity, SelectEntity):
         """Entity being removed from hass."""
         await super().async_will_remove_from_hass()
         if self._availability_prop is not None:
-            self._device.remove_state_update_calback(
+            self._device.remove_state_update_callback(
                 self.availability_updated,
                 self._availability_prop,
             )

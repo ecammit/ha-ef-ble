@@ -13,6 +13,7 @@ from homeassistant.const import (
     UnitOfElectricPotential,
     UnitOfPower,
     UnitOfTemperature,
+    UnitOfTime,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -24,6 +25,7 @@ from .eflib.devices import (
     delta3_classic,
     delta3_plus,
     delta_pro_3,
+    dpu,
     powerstream,
     river2,
     river3,
@@ -302,28 +304,124 @@ NUMBER_TYPES: list[EcoflowNumberEntityDescription] = [
             lambda device, value: device.set_feed_grid_mode_pow_limit(int(value))
         ),
     ),
-    EcoflowNumberEntityDescription[shp2.Device](
+    EcoflowNumberEntityDescription[dpu.Device | shp2.Device](
         key="backup_reserve_level",
         device_class=NumberDeviceClass.BATTERY,
         native_unit_of_measurement=PERCENTAGE,
         native_step=1.0,
-        native_min_value=10,
-        native_max_value=50,
+        min_value_prop="backup_reserve_level_min",
+        max_value_prop="backup_reserve_level_max",
+        availability_prop="backup_reserve_level_availability",
         async_set_native_value=(
             lambda device, value: device.set_backup_reserve_level(int(value))
         ),
-        availability_prop="backup_reserve_level",
     ),
-    EcoflowNumberEntityDescription[shp2.Device](
+    EcoflowNumberEntityDescription[dpu.Device](
+        key="backup_discharge_limit",
+        device_class=NumberDeviceClass.BATTERY,
+        native_unit_of_measurement=PERCENTAGE,
+        native_step=1.0,
+        min_value_prop="backup_discharge_limit_min",
+        max_value_prop="backup_discharge_limit_max",
+        availability_prop="backup_discharge_limit_availability",
+        async_set_native_value=(
+            lambda device, value: device.set_backup_discharge_limit(int(value))
+        ),
+    ),
+    EcoflowNumberEntityDescription[dpu.Device | shp2.Device](
         key="backup_charge_limit",
         device_class=NumberDeviceClass.BATTERY,
         native_unit_of_measurement=PERCENTAGE,
         native_step=1.0,
-        native_min_value=80,
-        native_max_value=100,
-        availability_prop="backup_charge_limit",
+        min_value_prop="backup_charge_limit_min",
+        max_value_prop="backup_charge_limit_max",
+        availability_prop="backup_charge_limit_availability",
         async_set_native_value=(
             lambda device, value: device.set_backup_charge_limit(int(value))
+        ),
+    ),
+    EcoflowNumberEntityDescription[dpu.Device](
+        key="power_standby_mins",
+        native_step=1.0,
+        native_min_value=0,
+        native_max_value=1440,
+        availability_prop="power_standby_mins_availability",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        device_class=NumberDeviceClass.DURATION,
+        async_set_native_value=(
+            lambda device, value: device.set_power_standby_mins(int(value))
+        ),
+    ),
+    EcoflowNumberEntityDescription[dpu.Device](
+        key="ac_standby_mins",
+        native_step=1.0,
+        native_min_value=0,
+        native_max_value=1440,
+        availability_prop="ac_standby_mins_availability",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        device_class=NumberDeviceClass.DURATION,
+        async_set_native_value=(
+            lambda device, value: device.set_ac_standby_mins(int(value))
+        ),
+    ),
+    EcoflowNumberEntityDescription[dpu.Device](
+        key="dc_standby_mins",
+        native_step=1.0,
+        native_min_value=0,
+        native_max_value=1440,
+        availability_prop="dc_standby_mins_availability",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        device_class=NumberDeviceClass.DURATION,
+        async_set_native_value=(
+            lambda device, value: device.set_dc_standby_mins(int(value))
+        ),
+    ),
+    EcoflowNumberEntityDescription[dpu.Device](
+        key="screen_standby_sec",
+        native_step=1.0,
+        native_min_value=0,
+        native_max_value=1800,
+        availability_prop="screen_standby_sec_availability",
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        device_class=NumberDeviceClass.DURATION,
+        async_set_native_value=(
+            lambda device, value: device.set_screen_standby_sec(int(value))
+        ),
+    ),
+    EcoflowNumberEntityDescription[dpu.Device](
+        key="chg_5p8_charging_speed",
+        device_class=NumberDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        native_step=100,
+        min_value_prop="chg_5p8_min_charging_power",
+        max_value_prop="chg_5p8_max_charging_power",
+        availability_prop="chg_5p8_charging_speed_availability",
+        async_set_native_value=(
+            lambda device, value: device.set_chg_5p8_charging_speed(int(value))
+        ),
+    ),
+    EcoflowNumberEntityDescription[dpu.Device](
+        key="chg_c20_charging_speed",
+        device_class=NumberDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        native_step=100,
+        min_value_prop="chg_c20_min_charging_power",
+        max_value_prop="chg_c20_max_charging_power",
+        availability_prop="chg_c20_charging_speed_availability",
+        async_set_native_value=(
+            lambda device, value: device.set_chg_c20_charging_speed(int(value))
+        ),
+    ),
+    EcoflowNumberEntityDescription[dpu.Device | shp2.Device](
+        key="ac_always_on_soc",
+        device_class=NumberDeviceClass.BATTERY,
+        native_unit_of_measurement=PERCENTAGE,
+        native_step=1.0,
+        min_value_prop="ac_always_on_soc_min",
+        max_value_prop="ac_always_on_soc_max",
+        availability_prop="ac_always_on_soc_availability",
+        async_set_native_value=(
+            lambda device, value: device.set_ac_always_on_soc_min(int(value))
         ),
     ),
 ]

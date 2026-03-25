@@ -240,6 +240,11 @@
     }
   },
   "entity": {
+    "button": {
+      "unpause_solar": {
+        "name": "Unpause Solar"
+      }
+    },
     "binary_sensor": {
       "channel_backup_is_ready": {
         "name": "Channel {channel} Backup Ready"
@@ -282,6 +287,27 @@
       },
       "backup_force_charge": {
         "name": "Channel {channel} Force Charge"
+      },
+      "is_charging": {
+        "name": "Is Charging"
+      },
+      "slow_charging": {
+          "name": "Slow Charging Switch"
+      },
+      "ac_allowed": {
+          "name": "AC Allowed"
+      },
+      "weak_hv_pv": {
+          "name": "Weak HV Solar Source"
+      },
+      "weak_lv_pv": {
+          "name": "Weak LV Solar Source"
+      },
+      "pv_hv_vol_low": {
+          "name": "HV Solar Voltage Low"
+      },
+      "pv_lv_vol_low": {
+          "name": "LV Solar Voltage Low"
       }
     },
     "sensor": {
@@ -348,6 +374,12 @@
       },
       "port_temperature": {
         "name": "{name} Temperature"
+      },
+      "port_power_factor": {
+        "name": "{name} Power Factor"
+      },
+      "port_error_code": {
+        "name": "{name} Error Code"
       },
       "grid_energy_today": {
         "name": "Grid Energy Today"
@@ -766,6 +798,62 @@
       },
       "dc_input_current": {
         "name": "DC Input Current"
+      },
+      "ac_5p8_in_type": {
+        "name": "AC 5P8 In Type",
+        "state": {
+          "in_idle": "Idle",
+          "in_ac_ev": "EV Charger",
+          "in_pd303": "Smart Home Panel 2",
+          "in_l14_trans": "L14"
+        }
+      },
+      "ac_5p8_out_type": {
+        "name": "AC 5P8 Out Type",
+        "state": {
+          "out_idle": "Idle",
+          "out_parallel_box": "Parallel Box",
+          "out_pd303": "Smart Home Panel 2"
+        }
+      },
+      "ac_c20_in_type": {
+        "name": "AC C20 Input Type"
+      },
+      "record_flag": {
+        "name": "Record Flags"
+      },
+      "show_flag": {
+        "name": "Show Flags"
+      },
+      "sys_work_sta": {
+        "name": "System Work State"
+      },
+      "chg_reign_sta": {
+        "name": "Charge Reign State"
+      },
+      "fan_state": {
+        "name": "Fan State"
+      },
+      "work_5p8_mode": {
+        "name": "AC 5P8 Work Mode"
+      },
+      "ac_in_freq": {
+        "name": "AC In Frequency"
+      },
+      "ac_out_freq": {
+        "name": "AC Out Frequency"
+      },
+      "ems_work_sta": {
+        "name": "EMS Work State"
+      },
+      "ems_max_avail_num": {
+        "name": "EMS Max Available Number"
+      },
+      "ems_open_bms_idx": {
+        "name": "EMS Open BMS Index"
+      },
+      "pcs_work_sta": {
+        "name": "PCS Work State"
       }
     },
     "select": {
@@ -805,6 +893,15 @@
           "self_powered": "Self Powered",
           "scheduled": "Scheduled Tasks"
         }
+      },
+      "sys_word_mode": {
+        "name": "Operating Mode",
+        "state": {
+          "none": "None",
+          "time_of_use": "TOU",
+          "self_powered": "Self Powered",
+          "scheduled": "Scheduled Tasks"
+        }
       }
     },
     "number": {
@@ -814,8 +911,32 @@
       "backup_charge_limit": {
         "name": "Charge Limit"
       },
+      "backup_discharge_limit": {
+        "name": "Discharge Limit"
+      },
       "ac_charging_speed": {
         "name": "AC Charging Speed"
+      },
+      "power_standby_mins": {
+        "name": "Device Timeout"
+      },
+      "ac_standby_mins": {
+        "name": "AC Timeout"
+      },
+      "dc_standby_mins": {
+        "name": "DC Timeout"
+      },
+      "screen_standby_sec": {
+        "name": "LCD Screen Timeout"
+      },
+      "chg_c20_charging_speed": {
+        "name": "AC C20 Charging Speed"
+      },
+      "chg_5p8_charging_speed": {
+        "name": "AC 5P8 Charging Speed"
+      },
+      "ac_always_on_soc": {
+        "name": "AC Always On Minimum Level"
       }
     },
     "switch": {
@@ -830,6 +951,24 @@
       },
       "eps_mode": {
         "name": "EPS Mode"
+      },
+      "dc_ports": {
+        "name": "DC Ports"
+      },
+      "ac_ports": {
+        "name": "AC Ports"
+      },
+      "battery_heating": {
+        "name": "Battery Heating"
+      },
+      "ac_xboost": {
+        "name": "AC X-Boost"
+      },
+      "ac_always_on": {
+        "name": "AC Always On"
+      },
+      "wireless_4g": {
+        "name": "4G Wireless"
       }
     }
   }

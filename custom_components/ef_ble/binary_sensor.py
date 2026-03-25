@@ -50,6 +50,12 @@ def _make_desc(
     )
 
 
+def lock(
+    key: str = "", *, enabled: bool = True, **kwargs: Unpack[_BinarySensorKwargs]
+) -> EcoflowBinarySensorEntityDescription:
+    return _make_desc(BinarySensorDeviceClass.LOCK, key, enabled=enabled, **kwargs)
+
+
 def problem(
     key: str = "", *, enabled: bool = True, **kwargs: Unpack[_BinarySensorKwargs]
 ) -> EcoflowBinarySensorEntityDescription:
@@ -143,6 +149,16 @@ _BINARY_SENSORS: Final[dict[str, BinarySensorEntityDescription]] = {
     # SHP2 generic binary sensors
     "grid_status": connectivity(enabled=True),
     "storm_mode": safety(enabled=True),
+    # DPU
+    "is_charging": battery_charging(
+        enabled=False, entity_category=EntityCategory.DIAGNOSTIC
+    ),
+    "slow_charging": power(enabled=False, entity_category=EntityCategory.DIAGNOSTIC),
+    "ac_allowed": lock(enabled=False, entity_category=EntityCategory.DIAGNOSTIC),
+    "weak_hv_pv": problem(enabled=False, entity_category=EntityCategory.DIAGNOSTIC),
+    "weak_lv_pv": problem(enabled=False, entity_category=EntityCategory.DIAGNOSTIC),
+    "pv_hv_vol_low": problem(enabled=False, entity_category=EntityCategory.DIAGNOSTIC),
+    "pv_lv_vol_low": problem(enabled=False, entity_category=EntityCategory.DIAGNOSTIC),
 }
 
 BINARY_SENSOR_TYPES: Final[dict[str, BinarySensorEntityDescription]] = (
@@ -191,7 +207,7 @@ class EcoflowBinarySensor(EcoflowEntity, BinarySensorEntity):
 
     async def async_will_remove_from_hass(self):
         """Entity being removed from hass."""
-        self._device.remove_state_update_calback(self.state_updated, self._prop_name)
+        self._device.remove_state_update_callback(self.state_updated, self._prop_name)
 
     @callback
     def state_updated(self, state: bool):

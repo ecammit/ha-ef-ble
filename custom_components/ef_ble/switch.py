@@ -13,7 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import DeviceConfigEntry
 from .eflib import DeviceBase
-from .eflib.devices import shp2
+from .eflib.devices import dpu, shp2
 from .entity import EcoflowEntity
 
 
@@ -30,9 +30,13 @@ SWITCH_TYPES = [
         device_class=SwitchDeviceClass.OUTLET,
     ),
     SwitchEntityDescription(
-        key="ac_ports",
-        name="AC Ports",
+        key="dc_ports",
         device_class=SwitchDeviceClass.OUTLET,
+    ),
+    EcoflowSwitchEntityDescription[dpu.Device](
+        key="ac_ports",
+        device_class=SwitchDeviceClass.OUTLET,
+        availability_prop="ac_ports_availability",
     ),
     SwitchEntityDescription(
         key="ac_ports_2",
@@ -134,6 +138,22 @@ SWITCH_TYPES = [
     SwitchEntityDescription(
         key="emergency_reverse_charging",
         name="Emergency Reverse Charging",
+    ),
+    SwitchEntityDescription(
+        key="battery_heating",
+    ),
+    SwitchEntityDescription(
+        key="wireless_4g",
+        entity_registry_enabled_default=False,
+    ),
+    EcoflowSwitchEntityDescription[dpu.Device](
+        key="ac_xboost",
+        availability_prop="ac_xboost_availability",
+        entity_registry_enabled_default=False,
+    ),
+    EcoflowSwitchEntityDescription[dpu.Device](
+        key="ac_always_on",
+        availability_prop="ac_always_on_availability",
     ),
     EcoflowSwitchEntityDescription[shp2.Device](
         key="eps_mode",
@@ -250,9 +270,10 @@ class EcoflowSwitchEntity(EcoflowEntity, SwitchEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         """Entity being removed from hass."""
+        self._device.remove_state_update_callback(self.state_updated, self._prop_name)
         await super().async_will_remove_from_hass()
         if self._availability_prop is not None:
-            self._device.remove_state_update_calback(
+            self._device.remove_state_update_callback(
                 self.availability_updated,
                 self._availability_prop,
             )
