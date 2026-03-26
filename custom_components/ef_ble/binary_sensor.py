@@ -155,10 +155,14 @@ _BINARY_SENSORS: Final[dict[str, BinarySensorEntityDescription]] = {
     ),
     "slow_charging": power(enabled=False, entity_category=EntityCategory.DIAGNOSTIC),
     "ac_allowed": lock(enabled=False, entity_category=EntityCategory.DIAGNOSTIC),
-    "weak_hv_pv": problem(enabled=False, entity_category=EntityCategory.DIAGNOSTIC),
-    "weak_lv_pv": problem(enabled=False, entity_category=EntityCategory.DIAGNOSTIC),
-    "pv_hv_vol_low": problem(enabled=False, entity_category=EntityCategory.DIAGNOSTIC),
-    "pv_lv_vol_low": problem(enabled=False, entity_category=EntityCategory.DIAGNOSTIC),
+    "hv_solar_weak": problem(enabled=False, entity_category=EntityCategory.DIAGNOSTIC),
+    "lv_solar_weak": problem(enabled=False, entity_category=EntityCategory.DIAGNOSTIC),
+    "hv_solar_low_voltage": problem(
+        enabled=False, entity_category=EntityCategory.DIAGNOSTIC
+    ),
+    "lv_solar_low_voltage": problem(
+        enabled=False, entity_category=EntityCategory.DIAGNOSTIC
+    ),
 }
 
 BINARY_SENSOR_TYPES: Final[dict[str, BinarySensorEntityDescription]] = (
@@ -204,10 +208,12 @@ class EcoflowBinarySensor(EcoflowEntity, BinarySensorEntity):
     async def async_added_to_hass(self):
         """Run when this Entity has been added to HA."""
         self._device.register_state_update_callback(self.state_updated, self._prop_name)
+        await super().async_added_to_hass()
 
     async def async_will_remove_from_hass(self):
         """Entity being removed from hass."""
         self._device.remove_state_update_callback(self.state_updated, self._prop_name)
+        await super().async_will_remove_from_hass()
 
     @callback
     def state_updated(self, state: bool):

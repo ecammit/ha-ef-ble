@@ -139,22 +139,6 @@ SWITCH_TYPES = [
         key="emergency_reverse_charging",
         name="Emergency Reverse Charging",
     ),
-    SwitchEntityDescription(
-        key="battery_heating",
-    ),
-    SwitchEntityDescription(
-        key="wireless_4g",
-        entity_registry_enabled_default=False,
-    ),
-    EcoflowSwitchEntityDescription[dpu.Device](
-        key="ac_xboost",
-        availability_prop="ac_xboost_availability",
-        entity_registry_enabled_default=False,
-    ),
-    EcoflowSwitchEntityDescription[dpu.Device](
-        key="ac_always_on",
-        availability_prop="ac_always_on_availability",
-    ),
     EcoflowSwitchEntityDescription[shp2.Device](
         key="eps_mode",
         device_class=SwitchDeviceClass.SWITCH,

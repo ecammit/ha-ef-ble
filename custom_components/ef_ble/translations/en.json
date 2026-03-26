@@ -297,16 +297,16 @@
       "ac_allowed": {
           "name": "AC Allowed"
       },
-      "weak_hv_pv": {
+      "hv_solar_weak": {
           "name": "Weak HV Solar Source"
       },
-      "weak_lv_pv": {
+      "lv_solar_weak": {
           "name": "Weak LV Solar Source"
       },
-      "pv_hv_vol_low": {
+      "hv_solar_low_voltage": {
           "name": "HV Solar Voltage Low"
       },
-      "pv_lv_vol_low": {
+      "lv_solar_low_voltage": {
           "name": "LV Solar Voltage Low"
       }
     },
@@ -817,43 +817,7 @@
         }
       },
       "ac_c20_in_type": {
-        "name": "AC C20 Input Type"
-      },
-      "record_flag": {
-        "name": "Record Flags"
-      },
-      "show_flag": {
-        "name": "Show Flags"
-      },
-      "sys_work_sta": {
-        "name": "System Work State"
-      },
-      "chg_reign_sta": {
-        "name": "Charge Reign State"
-      },
-      "fan_state": {
-        "name": "Fan State"
-      },
-      "work_5p8_mode": {
-        "name": "AC 5P8 Work Mode"
-      },
-      "ac_in_freq": {
-        "name": "AC In Frequency"
-      },
-      "ac_out_freq": {
-        "name": "AC Out Frequency"
-      },
-      "ems_work_sta": {
-        "name": "EMS Work State"
-      },
-      "ems_max_avail_num": {
-        "name": "EMS Max Available Number"
-      },
-      "ems_open_bms_idx": {
-        "name": "EMS Open BMS Index"
-      },
-      "pcs_work_sta": {
-        "name": "PCS Work State"
+        "name": "AC C20 In Type"
       }
     },
     "select": {
@@ -894,7 +858,7 @@
           "scheduled": "Scheduled Tasks"
         }
       },
-      "sys_word_mode": {
+      "operating_mode_select": {
         "name": "Operating Mode",
         "state": {
           "none": "None",
@@ -917,26 +881,11 @@
       "ac_charging_speed": {
         "name": "AC Charging Speed"
       },
-      "power_standby_mins": {
-        "name": "Device Timeout"
+      "ac_c20_charging_power": {
+        "name": "AC C20 Charging Power"
       },
-      "ac_standby_mins": {
-        "name": "AC Timeout"
-      },
-      "dc_standby_mins": {
-        "name": "DC Timeout"
-      },
-      "screen_standby_sec": {
-        "name": "LCD Screen Timeout"
-      },
-      "chg_c20_charging_speed": {
-        "name": "AC C20 Charging Speed"
-      },
-      "chg_5p8_charging_speed": {
-        "name": "AC 5P8 Charging Speed"
-      },
-      "ac_always_on_soc": {
-        "name": "AC Always On Minimum Level"
+      "ac_5p8_charging_power": {
+        "name": "AC 5P8 Charging Power"
       }
     },
     "switch": {
@@ -957,18 +906,6 @@
       },
       "ac_ports": {
         "name": "AC Ports"
-      },
-      "battery_heating": {
-        "name": "Battery Heating"
-      },
-      "ac_xboost": {
-        "name": "AC X-Boost"
-      },
-      "ac_always_on": {
-        "name": "AC Always On"
-      },
-      "wireless_4g": {
-        "name": "4G Wireless"
       }
     }
   }

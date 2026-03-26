@@ -157,9 +157,8 @@ SELECT_TYPES: list[EcoflowSelectEntityDescription] = [
         ),
     ),
     EcoflowSelectEntityDescription[dpu.Device](
-        key="sys_word_mode",
+        key="operating_mode_select",
         options=dpu.OperatingMode.options(include_unknown=False),
-        availability_prop="sys_word_mode_availability",
         set_state=(
             lambda device, value: device.set_operating_mode(
                 dpu.OperatingMode[value.upper()]

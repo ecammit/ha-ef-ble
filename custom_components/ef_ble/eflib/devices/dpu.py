@@ -1,7 +1,6 @@
+from collections.abc import Callable
 from enum import IntEnum
 from functools import partial
-
-from custom_components.ef_ble.eflib.props.enums import IntFieldValue
 
 from ..commands import TimeCommands
 from ..devicebase import AdvertisementData, BLEDevice, DeviceBase
@@ -15,6 +14,7 @@ from ..props import (
     proto_attr_mapper,
     repeated_pb_field_type,
 )
+from ..props.enums import IntFieldValue
 
 pb_heartbeat = proto_attr_mapper(yj751_sys_pb2.AppShowHeartbeatReport)
 pb_backend_record_heartbeat = proto_attr_mapper(
@@ -72,118 +72,123 @@ class _BatteryTemperature(
         return item.bp_temp if item.bp_no == self.battery_no else None
 
 
+def _has_bit_on(bit_position: int) -> Callable[[int | None], bool]:
+    def transform(value: int | None) -> bool:
+        if value is None:
+            return False
+        return bool((value >> bit_position) & 1)
+
+    return transform
+
+
+def _has_bit_off(bit_position: int) -> Callable[[int | None], bool]:
+    def transform(value: int | None) -> bool:
+        if value is None:
+            return False
+        return not bool((value >> bit_position) & 1)
+
+    return transform
+
+
+def _round(x: int) -> Callable[[float | None], float | None]:
+    def transform(value: float | None) -> float | None:
+        return None if value is None else round(value, x)
+
+    return transform
+
+
+def _multiply(x: int) -> Callable[[float | None], float | None]:
+    def transform(value: float | None) -> float | None:
+        return None if value is None else value * x
+
+    return transform
+
+
+def _bracket(min, value, max):
+    return max(min, min(value, max))
+
+
 class Device(DeviceBase, ProtobufProps):
     """Delta Pro Ultra"""
 
     SN_PREFIX = b"Y711"
     NAME_PREFIX = "EF-YJ"
 
-    @staticmethod
-    def _has_bit(value: int | None, bit_position: int) -> bool:
-        if value is None:
-            return False
-        return bool((value >> bit_position) & 1)
-
-    @staticmethod
-    def _packet_is_addressed(packet: Packet, src: int, cmsSet: int, cmdId: int) -> bool:
-        return packet.src == src and packet.cmdSet == cmsSet and packet.cmdId == cmdId
-
-    @staticmethod
-    def round2(x: float | None) -> float | None:
-        return None if x is None else round(x, 2)
-
-    @staticmethod
-    def multiply100(x: float | None) -> float | None:
-        return None if x is None else round(x * 100, 0)
-
     # Bitmap for various binary states and the individual binary states therein
     show_flag = pb_field(pb_heartbeat.show_flag)
-    is_charging = pb_field(pb_heartbeat.show_flag, lambda x: Device._has_bit(x, 0))
-    dc_ports = pb_field(pb_heartbeat.show_flag, lambda x: Device._has_bit(x, 1))
-    slow_charging = pb_field(pb_heartbeat.show_flag, lambda x: Device._has_bit(x, 4))
-    ac_allowed = pb_field(pb_heartbeat.show_flag, lambda x: not Device._has_bit(x, 9))
-    ac_ports = pb_field(pb_heartbeat.show_flag, lambda x: Device._has_bit(x, 2))
-    ac_ports_availability = pb_field(
-        pb_heartbeat.show_flag, lambda x: not bool(Device._has_bit(x, 9))
-    )
+    is_charging = pb_field(pb_heartbeat.show_flag, _has_bit_on(0))
+    dc_ports = pb_field(pb_heartbeat.show_flag, _has_bit_on(1))
+    slow_charging = pb_field(pb_heartbeat.show_flag, _has_bit_on(4))
+    ac_allowed = pb_field(pb_heartbeat.show_flag, _has_bit_off(9))
+    ac_ports = pb_field(pb_heartbeat.show_flag, _has_bit_on(2))
+    ac_ports_availability = pb_field(pb_heartbeat.show_flag, _has_bit_off(9))
 
     battery_level = pb_field(pb_heartbeat.soc)
 
-    lv_solar_power = pb_field(pb_heartbeat.in_lv_mppt_pwr, round2)
-    lv_solar_voltage = pb_field(pb_backend_record_heartbeat.in_lv_mppt_vol, round2)
-    lv_solar_current = pb_field(pb_backend_record_heartbeat.in_lv_mppt_amp, round2)
-    lv_solar_temperature = pb_field(pb_backend_record_heartbeat.mppt_lv_temp, round2)
-    lv_solar_err_code = pb_field(pb_backend_record_heartbeat.lv_pv_err_code)
+    lv_solar_power = pb_field(pb_heartbeat.in_lv_mppt_pwr, _round(2))
+    lv_solar_voltage = pb_field(pb_backend_record_heartbeat.in_lv_mppt_vol, _round(2))
+    lv_solar_current = pb_field(pb_backend_record_heartbeat.in_lv_mppt_amp, _round(2))
+    lv_solar_temperature = pb_field(pb_backend_record_heartbeat.mppt_lv_temp, _round(2))
+    lv_solar_error_code = pb_field(pb_backend_record_heartbeat.lv_pv_err_code)
 
-    hv_solar_power = pb_field(pb_heartbeat.in_hv_mppt_pwr, round2)
-    hv_solar_voltage = pb_field(pb_backend_record_heartbeat.in_hv_mppt_vol, round2)
-    hv_solar_current = pb_field(pb_backend_record_heartbeat.in_hv_mppt_amp, round2)
-    hv_solar_temperature = pb_field(pb_backend_record_heartbeat.mppt_hv_temp, round2)
-    hv_solar_err_code = pb_field(pb_backend_record_heartbeat.hv_pv_err_code)
+    hv_solar_power = pb_field(pb_heartbeat.in_hv_mppt_pwr, _round(2))
+    hv_solar_voltage = pb_field(pb_backend_record_heartbeat.in_hv_mppt_vol, _round(2))
+    hv_solar_current = pb_field(pb_backend_record_heartbeat.in_hv_mppt_amp, _round(2))
+    hv_solar_temperature = pb_field(pb_backend_record_heartbeat.mppt_hv_temp, _round(2))
+    hv_solar_error_code = pb_field(pb_backend_record_heartbeat.hv_pv_err_code)
 
-    ac_5p8_in_power = pb_field(pb_heartbeat.in_ac_5p8_pwr, round2)
-    ac_5p8_in_vol = pb_field(pb_backend_record_heartbeat.in_ac_5p8_vol, round2)
-    ac_5p8_in_amp = pb_field(pb_backend_record_heartbeat.in_ac_5p8_amp, round2)
+    ac_5p8_in_power = pb_field(pb_heartbeat.in_ac_5p8_pwr, _round(2))
+    ac_5p8_in_voltage = pb_field(pb_backend_record_heartbeat.in_ac_5p8_vol, _round(2))
+    ac_5p8_in_current = pb_field(pb_backend_record_heartbeat.in_ac_5p8_amp, _round(2))
     ac_5p8_in_type = pb_field(
         pb_heartbeat.access_5p8_in_type, Access5p8InputType.from_value
     )
 
-    ac_c20_in_power = pb_field(pb_heartbeat.in_ac_c20_pwr, round2)
-    ac_c20_in_vol = pb_field(pb_backend_record_heartbeat.in_ac_c20_vol, round2)
-    ac_c20_in_amp = pb_field(pb_backend_record_heartbeat.in_ac_c20_amp, round2)
+    ac_c20_in_power = pb_field(pb_heartbeat.in_ac_c20_pwr, _round(2))
+    ac_c20_in_voltage = pb_field(pb_backend_record_heartbeat.in_ac_c20_vol, _round(2))
+    ac_c20_in_current = pb_field(pb_backend_record_heartbeat.in_ac_c20_amp, _round(2))
     ac_c20_in_type = pb_field(pb_backend_record_heartbeat.c20_in_type)
 
-    weak_hv_pv = pb_field(
+    hv_solar_weak = pb_field(
         pb_display_property_upload.plug_in_info_pv_weak_source_flag,
-        lambda x: Device._has_bit(x, SolarSource.HV),
+        _has_bit_on(SolarSource.HV),
     )
-    weak_lv_pv = pb_field(
+    lv_solar_weak = pb_field(
         pb_display_property_upload.plug_in_info_pv_weak_source_flag,
-        lambda x: Device._has_bit(x, SolarSource.LV),
+        _has_bit_on(SolarSource.LV),
     )
-    pv_hv_vol_low = pb_field(
+    hv_solar_low_voltage = pb_field(
         pb_display_property_upload.plug_in_info_pv_vol_low_flag,
-        lambda x: Device._has_bit(x, SolarSource.HV),
+        _has_bit_on(SolarSource.HV),
     )
-    pv_lv_vol_low = pb_field(
+    lv_solar_low_voltage = pb_field(
         pb_display_property_upload.plug_in_info_pv_vol_low_flag,
-        lambda x: Device._has_bit(x, SolarSource.LV),
+        _has_bit_on(SolarSource.LV),
     )
-
-    wireless_4g = pb_field(pb_heartbeat.wireless_4g_on, bool)
-
-    record_flag = pb_field(pb_backend_record_heartbeat.record_flag)
-    sys_work_sta = pb_field(pb_backend_record_heartbeat.sys_work_sta)
-    chg_reign_sta = pb_field(pb_backend_record_heartbeat.chg_reign_sta)
-    fan_state = pb_field(pb_backend_record_heartbeat.fan_state)
-    work_5p8_mode = pb_field(pb_backend_record_heartbeat.work_5p8_mode)
 
     ac_in_freq = pb_field(pb_backend_record_heartbeat.ac_in_freq)
     ac_out_freq = pb_field(pb_backend_record_heartbeat.ac_out_freq)
 
-    ems_work_sta = pb_field(pb_backend_record_heartbeat.ems_work_sta)
-    ems_max_avail_num = pb_field(pb_backend_record_heartbeat.ems_max_avail_num)
-    ems_open_bms_idx = pb_field(pb_backend_record_heartbeat.ems_open_bms_idx)
-    ems_para_vol_min = pb_field(pb_backend_record_heartbeat.ems_para_vol_min)
-    ems_para_vol_max = pb_field(pb_backend_record_heartbeat.ems_para_vol_max)
+    battery_voltage = pb_field(pb_backend_record_heartbeat.bat_vol, _round(2))
+    battery_current = pb_field(pb_backend_record_heartbeat.bat_amp, _round(2))
 
-    bat_vol = pb_field(pb_backend_record_heartbeat.bat_vol, round2)
-    bat_amp = pb_field(pb_backend_record_heartbeat.bat_amp, round2)
-
-    bms_input_watts = pb_field(pb_backend_record_heartbeat.bms_input_watts, round2)
-    bms_output_watts = pb_field(pb_backend_record_heartbeat.bms_output_watts, round2)
-
-    pcs_work_sta = pb_field(pb_backend_record_heartbeat.pcs_work_sta)
-    pcs_dc_temp = pb_field(pb_backend_record_heartbeat.pcs_dc_temp, round2)
-    pcs_dc_err_code = pb_field(pb_backend_record_heartbeat.pcs_dc_err_code)
-    pcs_ac_temp = pb_field(pb_backend_record_heartbeat.pcs_ac_temp, round2)
-    pcs_ac_err_code = pb_field(pb_backend_record_heartbeat.pcs_ac_err_code)
-
-    pd_temp = pb_field(pb_backend_record_heartbeat.pd_temp, round2)
-
-    ev_max_charger_cur = pb_field(
-        pb_backend_record_heartbeat.ev_max_charger_cur, round2
+    battery_input_power = pb_field(
+        pb_backend_record_heartbeat.bms_input_watts, _round(2)
     )
+    battery_output_power = pb_field(
+        pb_backend_record_heartbeat.bms_output_watts, _round(2)
+    )
+
+    dc_inverter_temperature = pb_field(
+        pb_backend_record_heartbeat.pcs_dc_temp, _round(2)
+    )
+    dc_inverter_error_code = pb_field(pb_backend_record_heartbeat.pcs_dc_err_code)
+    ac_inverter_temperature = pb_field(
+        pb_backend_record_heartbeat.pcs_ac_temp, _round(2)
+    )
+    ac_inverter_error_code = pb_field(pb_backend_record_heartbeat.pcs_ac_err_code)
+
+    system_temperature = pb_field(pb_backend_record_heartbeat.pd_temp, _round(2))
 
     input_power = pb_field(pb_heartbeat.watts_in_sum)
     output_power = pb_field(pb_heartbeat.watts_out_sum)
@@ -199,63 +204,93 @@ class Device(DeviceBase, ProtobufProps):
     )
 
     usb1_out_power = pb_field(pb_heartbeat.out_usb1_pwr)
-    usb1_out_vol = pb_field(pb_backend_record_heartbeat.out_usb1_vol, round2)
-    usb1_out_amp = pb_field(pb_backend_record_heartbeat.out_usb1_amp, round2)
+    usb1_out_voltage = pb_field(pb_backend_record_heartbeat.out_usb1_vol, _round(2))
+    usb1_out_current = pb_field(pb_backend_record_heartbeat.out_usb1_amp, _round(2))
 
     usb2_out_power = pb_field(pb_heartbeat.out_usb2_pwr)
-    usb2_out_vol = pb_field(pb_backend_record_heartbeat.out_usb2_vol, round2)
-    usb2_out_amp = pb_field(pb_backend_record_heartbeat.out_usb2_amp, round2)
+    usb2_out_voltage = pb_field(pb_backend_record_heartbeat.out_usb2_vol, _round(2))
+    usb2_out_current = pb_field(pb_backend_record_heartbeat.out_usb2_amp, _round(2))
 
     typec1_out_power = pb_field(pb_heartbeat.out_typec1_pwr)
-    typec1_out_vol = pb_field(pb_backend_record_heartbeat.out_typec1_vol, round2)
-    typec1_out_amp = pb_field(pb_backend_record_heartbeat.out_typec1_amp, round2)
+    typec1_out_voltage = pb_field(pb_backend_record_heartbeat.out_typec1_vol, _round(2))
+    typec1_out_current = pb_field(pb_backend_record_heartbeat.out_typec1_amp, _round(2))
 
     typec2_out_power = pb_field(pb_heartbeat.out_typec2_pwr)
-    typec2_out_vol = pb_field(pb_backend_record_heartbeat.out_typec2_vol, round2)
-    typec2_out_amp = pb_field(pb_backend_record_heartbeat.out_typec2_amp, round2)
+    typec2_out_voltage = pb_field(pb_backend_record_heartbeat.out_typec2_vol, _round(2))
+    typec2_out_current = pb_field(pb_backend_record_heartbeat.out_typec2_amp, _round(2))
 
-    ads_out_power = pb_field(pb_heartbeat.out_ads_pwr)
-    ads_out_vol = pb_field(pb_backend_record_heartbeat.out_ads_vol, round2)
-    ads_out_amp = pb_field(pb_backend_record_heartbeat.out_ads_amp, round2)
-    ads_err_code = pb_field(pb_backend_record_heartbeat.ads_err_code)
+    anderson_out_power = pb_field(pb_heartbeat.out_ads_pwr)
+    anderson_out_voltage = pb_field(pb_backend_record_heartbeat.out_ads_vol, _round(2))
+    anderson_out_current = pb_field(pb_backend_record_heartbeat.out_ads_amp, _round(2))
+    anderson_out_error_code = pb_field(pb_backend_record_heartbeat.ads_err_code)
 
     ac_l1_1_out_power = pb_field(pb_heartbeat.out_ac_l1_1_pwr)
-    ac_l1_1_out_vol = pb_field(pb_backend_record_heartbeat.out_ac_l1_1_vol, round2)
-    ac_l1_1_out_amp = pb_field(pb_backend_record_heartbeat.out_ac_l1_1_amp, round2)
-    ac_l1_1_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_l1_1_pf, multiply100)
+    ac_l1_1_out_voltage = pb_field(
+        pb_backend_record_heartbeat.out_ac_l1_1_vol, _round(2)
+    )
+    ac_l1_1_out_current = pb_field(
+        pb_backend_record_heartbeat.out_ac_l1_1_amp, _round(2)
+    )
+    ac_l1_1_out_power_factor = pb_field(
+        pb_backend_record_heartbeat.out_ac_l1_1_pf, _multiply(100)
+    )
 
     ac_l1_2_out_power = pb_field(pb_heartbeat.out_ac_l1_2_pwr)
-    ac_l1_2_out_vol = pb_field(pb_backend_record_heartbeat.out_ac_l1_2_vol, round2)
-    ac_l1_2_out_amp = pb_field(pb_backend_record_heartbeat.out_ac_l1_2_amp, round2)
-    ac_l1_2_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_l1_2_pf, multiply100)
+    ac_l1_2_out_voltage = pb_field(
+        pb_backend_record_heartbeat.out_ac_l1_2_vol, _round(2)
+    )
+    ac_l1_2_out_current = pb_field(
+        pb_backend_record_heartbeat.out_ac_l1_2_amp, _round(2)
+    )
+    ac_l1_2_out_power_factor = pb_field(
+        pb_backend_record_heartbeat.out_ac_l1_2_pf, _multiply(100)
+    )
 
     ac_l2_1_out_power = pb_field(pb_heartbeat.out_ac_l2_1_pwr)
-    ac_l2_1_out_vol = pb_field(pb_backend_record_heartbeat.out_ac_l2_1_vol, round2)
-    ac_l2_1_out_amp = pb_field(pb_backend_record_heartbeat.out_ac_l2_1_amp, round2)
-    ac_l2_1_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_l2_1_pf, multiply100)
+    ac_l2_1_out_voltage = pb_field(
+        pb_backend_record_heartbeat.out_ac_l2_1_vol, _round(2)
+    )
+    ac_l2_1_out_current = pb_field(
+        pb_backend_record_heartbeat.out_ac_l2_1_amp, _round(2)
+    )
+    ac_l2_1_out_power_factor = pb_field(
+        pb_backend_record_heartbeat.out_ac_l2_1_pf, _multiply(100)
+    )
 
     ac_l2_2_out_power = pb_field(pb_heartbeat.out_ac_l2_2_pwr)
-    ac_l2_2_out_vol = pb_field(pb_backend_record_heartbeat.out_ac_l2_2_vol, round2)
-    ac_l2_2_out_amp = pb_field(pb_backend_record_heartbeat.out_ac_l2_2_amp, round2)
-    ac_l2_2_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_l2_2_pf, multiply100)
+    ac_l2_2_out_voltage = pb_field(
+        pb_backend_record_heartbeat.out_ac_l2_2_vol, _round(2)
+    )
+    ac_l2_2_out_current = pb_field(
+        pb_backend_record_heartbeat.out_ac_l2_2_amp, _round(2)
+    )
+    ac_l2_2_out_power_factor = pb_field(
+        pb_backend_record_heartbeat.out_ac_l2_2_pf, _multiply(100)
+    )
 
     ac_tt_out_power = pb_field(pb_heartbeat.out_ac_tt_pwr)
-    ac_tt_out_vol = pb_field(pb_backend_record_heartbeat.out_ac_tt_vol, round2)
-    ac_tt_out_amp = pb_field(pb_backend_record_heartbeat.out_ac_tt_amp, round2)
-    ac_tt_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_tt_pf, multiply100)
+    ac_tt_out_voltage = pb_field(pb_backend_record_heartbeat.out_ac_tt_vol, _round(2))
+    ac_tt_out_current = pb_field(pb_backend_record_heartbeat.out_ac_tt_amp, _round(2))
+    ac_tt_out_power_factor = pb_field(
+        pb_backend_record_heartbeat.out_ac_tt_pf, _multiply(100)
+    )
 
     ac_l14_out_power = pb_field(pb_heartbeat.out_ac_l14_pwr)
-    ac_l14_out_vol = pb_field(pb_backend_record_heartbeat.out_ac_l14_vol, round2)
-    ac_l14_out_amp = pb_field(pb_backend_record_heartbeat.out_ac_l14_amp, round2)
-    ac_l14_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_l14_pf, multiply100)
+    ac_l14_out_voltage = pb_field(pb_backend_record_heartbeat.out_ac_l14_vol, _round(2))
+    ac_l14_out_current = pb_field(pb_backend_record_heartbeat.out_ac_l14_amp, _round(2))
+    ac_l14_out_power_factor = pb_field(
+        pb_backend_record_heartbeat.out_ac_l14_pf, _multiply(100)
+    )
 
     ac_5p8_out_type = pb_field(
         pb_heartbeat.access_5p8_out_type, Access5p8OutputType.from_value
     )
     ac_5p8_out_power = pb_field(pb_heartbeat.out_ac_5p8_pwr)
-    ac_5p8_out_vol = pb_field(pb_backend_record_heartbeat.out_ac_5p8_vol, round2)
-    ac_5p8_out_amp = pb_field(pb_backend_record_heartbeat.out_ac_5p8_amp, round2)
-    ac_5p8_out_pf = pb_field(pb_backend_record_heartbeat.out_ac_5p8_pf, multiply100)
+    ac_5p8_out_voltage = pb_field(pb_backend_record_heartbeat.out_ac_5p8_vol, _round(2))
+    ac_5p8_out_current = pb_field(pb_backend_record_heartbeat.out_ac_5p8_amp, _round(2))
+    ac_5p8_out_power_factor = pb_field(
+        pb_backend_record_heartbeat.out_ac_5p8_pf, _multiply(100)
+    )
 
     backup_discharge_limit = pb_field(pb_app_para_heartbeat.dsg_min_soc)
     backup_discharge_limit_min = 0
@@ -269,43 +304,39 @@ class Device(DeviceBase, ProtobufProps):
     backup_reserve_level_min = 5
     backup_reserve_level_max = 100
 
-    sys_word_mode = pb_field(
+    operating_mode_select = pb_field(
         pb_app_para_heartbeat.sys_word_mode, OperatingMode.from_value
     )
 
-    power_standby_mins = pb_field(pb_app_para_heartbeat.power_standby_mins)
+    ac_5p8_min_charging_power = 600
+    ac_5p8_max_charging_power = 7200
+    ac_5p8_charging_power = pb_field(pb_app_para_heartbeat.chg_5p8_set_watts)
+    ac_5p8_charging_power_availability = True
 
-    screen_standby_sec = pb_field(pb_app_para_heartbeat.screen_standby_sec)
-    screen_standby_sec_availability = True
-
-    dc_standby_mins = pb_field(pb_app_para_heartbeat.dc_standby_mins)
-    dc_standby_mins_availability = True
-    ac_standby_mins = pb_field(pb_app_para_heartbeat.ac_standby_mins)
-
-    battery_heating = pb_field(pb_app_para_heartbeat.bms_mode_set, bool)
-    solar_only = pb_field(pb_app_para_heartbeat.solar_only_flg, bool)
-
-    ac_xboost = pb_field(pb_app_para_heartbeat.ac_xboost, bool)
-
-    ac_always_on = pb_field(pb_app_para_heartbeat.ac_often_open_flg, bool)
-
-    ac_always_on_soc = pb_field(pb_app_para_heartbeat.ac_often_open_min_soc, int)
-    ac_always_on_soc_min = 0
-    ac_always_on_soc_max = 100
-
-    chg_5p8_min_charging_power = 600
-    chg_5p8_max_charging_power = 7200
-    chg_5p8_charging_speed = pb_field(pb_app_para_heartbeat.chg_5p8_set_watts)
-    chg_5p8_charging_speed_availability = True
-
-    chg_c20_min_charging_power = 600
-    chg_c20_max_charging_power = 1800
-    chg_c20_charging_speed = pb_field(pb_app_para_heartbeat.chg_c20_set_watts)
-    chg_c20_charging_speed_availability = pb_field(
+    ac_c20_min_charging_power = 600
+    ac_c20_max_charging_power = 1800
+    ac_c20_charging_power = pb_field(pb_app_para_heartbeat.chg_c20_set_watts)
+    ac_c20_charging_power_availability = pb_field(
+        # slow charging switch must be enabled
         pb_heartbeat.show_flag,
-        # slow_charging switch enabled
-        lambda x: bool(Device._has_bit(x, 4)),
+        _has_bit_on(4),
     )
+
+    # Properties for un-implemented controls and sensors
+    # wireless_4g = pb_field(pb_heartbeat.wireless_4g_on, bool)
+    # power_standby_minutes = pb_field(pb_app_para_heartbeat.power_standby_mins)
+    # screen_standby_seconds = pb_field(pb_app_para_heartbeat.screen_standby_sec)
+    # dc_standby_minutes = pb_field(pb_app_para_heartbeat.dc_standby_mins)
+    # ac_standby_minutes = pb_field(pb_app_para_heartbeat.ac_standby_mins)
+    # battery_heating = pb_field(pb_app_para_heartbeat.bms_mode_set, bool)
+    # solar_only = pb_field(pb_app_para_heartbeat.solar_only_flg, bool)
+    # ac_xboost = pb_field(pb_app_para_heartbeat.ac_xboost, bool)
+    # ac_always_on = pb_field(pb_app_para_heartbeat.ac_often_open_flg, bool)
+    # ac_always_on_soc = pb_field(pb_app_para_heartbeat.ac_often_open_min_soc, int)
+    # ev_max_charger_cur = pb_field(
+    #     pb_backend_record_heartbeat.ev_max_charger_cur, _round(2)
+    # )
+    # fan_running = pb_field(pb_backend_record_heartbeat.fan_state, bool)
 
     extra_battery_name = "Delta Pro Ultra Battery"
 
@@ -333,60 +364,62 @@ class Device(DeviceBase, ProtobufProps):
 
         processed = True
         self.reset_updated()
-
-        if Device._packet_is_addressed(packet, 0x02, 0x02, 0x01):
-            # Ping
-            await self._conn.replyPacket(packet)
-            self._logger.debug(
-                "%s: %s: Parsed data: %r", self.address, self.name, packet
-            )
-            self.update_from_bytes(yj751_sys_pb2.AppShowHeartbeatReport, packet.payload)
-            # self._logger.debug("DPU AppShowHeartbeatReport: \n %s", str(p))
-        elif Device._packet_is_addressed(packet, 0x02, 0x02, 0x02):
-            # BackendRecordHeartbeatReport
-            await self._conn.replyPacket(packet)
-            self.update_from_bytes(
-                yj751_sys_pb2.BackendRecordHeartbeatReport, packet.payload
-            )
-            # self._logger.debug("DPU BackendRecordHeartbeatReport: \n %s", str(p))
-        elif Device._packet_is_addressed(packet, 0x02, 0x02, 0x03):
-            await self._conn.replyPacket(packet)
-            self.update_from_bytes(yj751_sys_pb2.APPParaHeartbeatReport, packet.payload)
-            # self._logger.debug("DPU APPParaHeartbeatReport: \n %s", str(p))
-        elif Device._packet_is_addressed(packet, 0x02, 0x02, 0x04):
-            await self._conn.replyPacket(packet)
-            self.update_from_bytes(yj751_sys_pb2.BpInfoReport, packet.payload)
-            # self._logger.debug("DPU BpInfoReport: \n %s", str(p))
-        elif Device._packet_is_addressed(packet, 0x02, 0x0A, 0x20):
-            await self._conn.replyPacket(packet)
-            self.update_from_bytes(yj751_sys_pb2.CurrentNode, packet.payload)
-            # self._logger.debug("DPU CurrentNode: \n %s", str(p))
-            processed = True
-        elif Device._packet_is_addressed(packet, 0x02, 0xFE, 0x15):
-            await self._conn.replyPacket(packet)
-            self.update_from_bytes(yj751_sys_pb2.DisplayPropertyUpload, packet.payload)
-            # self._logger.debug("DPU DisplayPropertyUpload: \n %s", str(p))
-            processed = True
-        elif Device._packet_is_addressed(packet, 0x02, 0x02, 0x17):
-            await self._conn.replyPacket(packet)
-            self.update_from_bytes(yj751_sys_pb2.DevRequest, packet.payload)
-            # self._logger.debug("DPU DevRequest: \n %s", str(p))
-        elif Device._packet_is_addressed(packet, 0x35, 0x35, 0x20):
-            self._logger.debug(
-                "%s: %s: Ping received: %r", self.address, self.name, packet
-            )
-        elif Device._packet_is_addressed(
-            packet, 0x35, 0x01, Packet.NET_BLE_COMMAND_CMD_SET_RET_TIME
-        ):
-            # Device requested for time and timezone offset, so responding with that
-            # otherwise it will not be able to send us predictions and config data
-            if len(packet.payload) == 0:
-                self._time_commands.async_send_all()
-        else:
-            self._logger.debug(
-                "%s: %s: Unhandled packet: %r", self.address, self.name, packet
-            )
-            processed = False
+        match (packet.src, packet.cmdSet, packet.cmdId):
+            case 0x02, 0x02, 0x01:
+                # Ping
+                await self._conn.replyPacket(packet)
+                self._logger.debug(
+                    "%s: %s: Parsed data: %r", self.address, self.name, packet
+                )
+                self.update_from_bytes(
+                    yj751_sys_pb2.AppShowHeartbeatReport, packet.payload
+                )
+                # self._logger.debug("DPU AppShowHeartbeatReport: \n %s", str(p))
+            case 0x02, 0x02, 0x02:
+                # BackendRecordHeartbeatReport
+                await self._conn.replyPacket(packet)
+                self.update_from_bytes(
+                    yj751_sys_pb2.BackendRecordHeartbeatReport, packet.payload
+                )
+                # self._logger.debug("DPU BackendRecordHeartbeatReport: \n %s", str(p))
+            case 0x02, 0x02, 0x03:
+                await self._conn.replyPacket(packet)
+                self.update_from_bytes(
+                    yj751_sys_pb2.APPParaHeartbeatReport, packet.payload
+                )
+                # self._logger.debug("DPU APPParaHeartbeatReport: \n %s", str(p))
+            case 0x02, 0x02, 0x04:
+                await self._conn.replyPacket(packet)
+                self.update_from_bytes(yj751_sys_pb2.BpInfoReport, packet.payload)
+                # self._logger.debug("DPU BpInfoReport: \n %s", str(p))
+            case 0x02, 0x0A, 0x20:
+                await self._conn.replyPacket(packet)
+                self.update_from_bytes(yj751_sys_pb2.CurrentNode, packet.payload)
+                # self._logger.debug("DPU CurrentNode: \n %s", str(p))
+            case 0x02, 0xFE, 0x15:
+                await self._conn.replyPacket(packet)
+                self.update_from_bytes(
+                    yj751_sys_pb2.DisplayPropertyUpload, packet.payload
+                )
+                # self._logger.debug("DPU DisplayPropertyUpload: \n %s", str(p))
+            case 0x02, 0x02, 0x17:
+                await self._conn.replyPacket(packet)
+                self.update_from_bytes(yj751_sys_pb2.DevRequest, packet.payload)
+                # self._logger.debug("DPU DevRequest: \n %s", str(p))
+            case 0x35, 0x35, 0x20:
+                self._logger.debug(
+                    "%s: %s: Ping received: %r", self.address, self.name, packet
+                )
+            case 0x35, 0x01, Packet.NET_BLE_COMMAND_CMD_SET_RET_TIME:
+                # Device requested for time and timezone offset, so responding with that
+                # otherwise it will not be able to send us predictions and config data
+                if len(packet.payload) == 0:
+                    self._time_commands.async_send_all()
+            case _:
+                self._logger.debug(
+                    "%s: %s: Unhandled packet: %r", self.address, self.name, packet
+                )
+                processed = False
 
         for field_name in self.updated_fields:
             try:
@@ -399,244 +432,264 @@ class Device(DeviceBase, ProtobufProps):
 
         return processed
 
-    async def _send_command_packet(self, dst: int, cmdFunc: int, cmdId: int, message):
+    async def _send_command_packet(self, dst: int, cmd_func: int, cmd_id: int, message):
         payload = message.SerializeToString()
-        p = Packet(0x21, dst, cmdFunc, cmdId, payload, 0x01, 0x01, 0x13)
+        p = Packet(0x21, dst, cmd_func, cmd_id, payload, 0x01, 0x01, 0x13)
 
         await self._conn.sendPacket(p)
 
     async def enable_wireless_4g(self, enable: bool):
         """Send command to enable/disable wireless 4G"""
-
         self._logger.debug("enable_wireless_4g: %s", enable)
 
-        packet = yj751_sys_pb2.Switch4GEnable()
-        packet.en_4G_open = 1 if enable else 0
+        # Current value from pb_heartbeat.wireless_4g_on
+        message = yj751_sys_pb2.Switch4GEnable(en_4G_open=int(enable))
 
-        await self._send_command_packet(53, 53, 117, packet)
+        await self._send_command_packet(
+            dst=0x35, cmd_func=0x35, cmd_id=0x75, message=message
+        )
         return True
 
     async def enable_dc_ports(self, enable: bool):
         """Send command to enable/disable DC"""
-
         self._logger.debug("enable_dc_ports: %s", enable)
 
-        packet = yj751_sys_pb2.DCSwitchSet()
-        packet.enable = 1 if enable else 0
+        # Current value from pb_heartbeat.show_flag bit 1
+        message = yj751_sys_pb2.DCSwitchSet(enable=int(enable))
 
-        await self._send_command_packet(2, 2, 68, packet)
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0x02, cmd_id=0x44, message=message
+        )
         return True
 
     async def enable_ac_ports(self, enable: bool):
         """Send command to enable/disable AC"""
-
         self._logger.debug("enable_ac_ports: %s", enable)
 
+        # Current value from pb_heartbeat.show_flag bit 2
         if not self.ac_allowed:
             self._logger.warning("Cannot enable AC ports when AC is not allowed")
             return False
 
-        packet = yj751_sys_pb2.ACDsgSet()
-        packet.enable = 1 if enable else 0
+        message = yj751_sys_pb2.ACDsgSet(enable=int(enable))
 
-        await self._send_command_packet(2, 2, 72, packet)
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0x02, cmd_id=0x48, message=message
+        )
         return True
 
     async def enable_ac_xboost(self, enable: bool):
         """Send command to enable/disable AC XBoost"""
-
         self._logger.debug("set_ac_xboost: %s", enable)
 
-        packet = yj751_sys_pb2.ACDsgSet()
-        packet.xboost = 1 if enable else 0
+        # Current value from pb_app_para_heartbeat.ac_xboost
+        message = yj751_sys_pb2.ACDsgSet(xboost=int(enable))
 
-        await self._send_command_packet(2, 2, 72, packet)
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0x02, cmd_id=0x48, message=message
+        )
         return True
 
     async def enable_battery_heating(self, enable: bool):
         """Send command to enable/disable battery preconditioning"""
-
         self._logger.debug("enable_battery_heating: %s", enable)
 
-        packet = yj751_sys_pb2.BpHeatSet()
-        packet.en_bp_heat = 1 if enable else 0
+        # Current value from pb_app_para_heartbeat.bms_mode_set
+        message = yj751_sys_pb2.BpHeatSet(en_bp_heat=int(enable))
 
-        await self._send_command_packet(2, 2, 89, packet)
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0x02, cmd_id=0x59, message=message
+        )
         return True
 
     async def enable_ac_always_on(self, enable: bool):
         """Send command to enable/disable AC Always On"""
-
         self._logger.debug(
             "set_ac_always_on: %s, ac_often_open_min_soc: %s",
             enable,
             self.ac_always_on_soc_min,
         )
 
-        packet = yj751_sys_pb2.AcOftenOpenCfg()
-        packet.ac_often_open = 1 if enable else 0
-        packet.ac_often_open_min_soc = self.ac_always_on_soc_min
+        # Current values from pb_app_para_heartbeat.ac_often_open and
+        # pb_app_para_heartbeat.ac_often_open_min_soc. HV is bit 1 and LV is bit 0
+        message = yj751_sys_pb2.AcOftenOpenCfg(
+            ac_often_open=int(enable),
+            ac_often_open_min_soc=0,
+        )
 
-        await self._send_command_packet(2, 2, 93, packet)
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0x02, cmd_id=0x5D, message=message
+        )
         return True
 
     async def unpause_solar(self):
         """Send command to clear weak PV source flag"""
-
         self._logger.debug("unlock_pv_weak")
 
-        packet = yj751_sys_pb2.ConfigWrite()
-        packet.unlock_pv_weak = True
+        # Current value from pb_display_property_upload.plug_in_info_pv_weak_source_flag
+        message = yj751_sys_pb2.ConfigWrite(unlock_pv_weak=True)
 
-        await self._send_command_packet(2, 2, 89, packet)
-        return True
-
-    async def set_ac_always_on_soc_min(self, soc: int):
-        """Send command to set AC Always On SOC minimum"""
-
-        self._logger.debug(
-            "set_ac_always_on_soc_min: %s, ac_often_open: %s", soc, self.ac_always_on
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0xFE, cmd_id=0x11, message=message
         )
-
-        packet = yj751_sys_pb2.AcOftenOpenCfg()
-        packet.ac_often_open = 1 if self.ac_always_on else 0
-        packet.ac_often_open_min_soc = max(
-            self.ac_always_on_soc_min, min(soc, self.ac_always_on_soc_max)
-        )
-
-        await self._send_command_packet(2, 2, 93, packet)
         return True
 
     async def set_operating_mode(self, mode: OperatingMode):
         """Send command to set operating mode"""
-
         self._logger.debug("set_operating_mode: %s", mode)
 
-        packet = yj751_sys_pb2.ConfigWrite()
-        cfg = packet.cfg_energy_strategy_operate_mode
+        # Current value from pb_app_para_heartbeat.sys_word_mode
+        message = yj751_sys_pb2.ConfigWrite()
+        cfg = message.cfg_energy_strategy_operate_mode
         cfg.operate_self_powered_open = mode == OperatingMode.SELF_POWERED
         cfg.operate_scheduled_open = mode == OperatingMode.SCHEDULED
         cfg.operate_tou_mode_open = mode == OperatingMode.TIME_OF_USE
 
-        await self._send_command_packet(2, 254, 17, packet)
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0xFE, cmd_id=0x11, message=message
+        )
         return True
 
-    async def set_chg_c20_charging_speed(self, watts: int):
-        """Send command to set C20 charging speed"""
+    async def set_ac_c20_charging_power(self, watts: int):
+        """Send command to set C20 charging power"""
+        self._logger.debug("set_ac_c20_charging_power: %s", watts)
 
-        self._logger.debug("set_chg_c20_charging_speed: %s", watts)
-
-        packet = yj751_sys_pb2.ACChgSet()
-        packet.chg_c20_watts = max(
-            self.chg_c20_min_charging_power, min(watts, self.chg_c20_max_charging_power)
+        # Current value from pb_app_para_heartbeat.chg_c20_set_watts
+        message = yj751_sys_pb2.ACChgSet(
+            chg_c20_watts=_bracket(
+                self.ac_c20_min_charging_power, watts, self.ac_c20_max_charging_power
+            )
         )
 
-        await self._send_command_packet(2, 2, 73, packet)
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0x02, cmd_id=0x49, message=message
+        )
         return True
 
-    async def set_chg_5p8_charging_speed(self, watts: int):
-        """Send command to set 5p8 port charging speed"""
+    async def set_ac_5p8_charging_power(self, watts: int):
+        """Send command to set 5p8 port charging power"""
+        self._logger.debug("set_ac_5p8_charging_power: %s", watts)
 
-        self._logger.debug("set_chg_5p8_charging_speed: %s", watts)
-
-        packet = yj751_sys_pb2.ACChgSet()
-        packet.chg_5p8_watts = max(
-            self.chg_5p8_min_charging_power, min(watts, self.chg_5p8_max_charging_power)
+        # Current value from pb_app_para_heartbeat.chg_5p8_set_watts
+        message = yj751_sys_pb2.ACChgSet(
+            chg_5p8_watts=_bracket(
+                self.ac_5p8_min_charging_power, watts, self.ac_5p8_max_charging_power
+            )
         )
 
-        await self._send_command_packet(2, 2, 73, packet)
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0x02, cmd_id=0x49, message=message
+        )
         return True
 
     async def set_backup_discharge_limit(self, soc: int):
         """Send command to set backup discharge limit"""
-
         self._logger.debug("set_backup_discharge_limit: %s", soc)
 
-        packet = yj751_sys_pb2.DsgSocMinSet()
-        packet.min_dsg_soc = max(
-            self.backup_discharge_limit_min, min(soc, self.backup_discharge_limit_max)
+        # Current value from pb_app_para_heartbeat.dsg_min_soc
+        message = yj751_sys_pb2.DsgSocMinSet(
+            min_dsg_soc=_bracket(
+                self.backup_discharge_limit_min, soc, self.backup_discharge_limit_max
+            )
         )
 
-        await self._send_command_packet(2, 2, 88, packet)
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0x02, cmd_id=0x58, message=message
+        )
         return True
 
     async def set_backup_charge_limit(self, soc: int):
         """Send command to set backup charge limit"""
-
         self._logger.debug("set_backup_charge_limit: %s", soc)
 
-        packet = yj751_sys_pb2.ChgSocMaxSet()
-        packet.max_chg_soc = max(
-            self.backup_charge_limit_min, min(soc, self.backup_charge_limit_max)
+        # Current value from pb_app_para_heartbeat.chg_max_soc
+        message = yj751_sys_pb2.ChgSocMaxSet(
+            max_chg_soc=_bracket(
+                self.backup_charge_limit_min, soc, self.backup_charge_limit_max
+            )
         )
 
-        await self._send_command_packet(2, 2, 87, packet)
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0x02, cmd_id=0x57, message=message
+        )
         return True
 
     async def set_backup_reserve_level(self, soc: int):
         """Send command to set backup reserve level"""
-
         self._logger.debug("set_backup_reserve_level: %s", soc)
 
-        packet = yj751_sys_pb2.ConfigWrite()
-        packet.cfg_backup_reverse_soc = max(
-            self.backup_reserve_level_min, min(soc, self.backup_reserve_level_max)
+        # Current value from pb_app_para_heartbeat.sys_backup_soc
+        message = yj751_sys_pb2.ConfigWrite(
+            cfg_backup_reverse_soc=_bracket(
+                self.backup_reserve_level_min, soc, self.backup_reserve_level_max
+            )
         )
 
-        await self._send_command_packet(2, 254, 17, packet)
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0xFE, cmd_id=0x11, message=message
+        )
         return True
 
-    async def set_power_standby_mins(self, minutes: int):
+    async def set_power_standby_minutes(self, minutes: int):
         """Send command to set power standby minutes"""
-
         self._logger.debug("set_power_standby_mins: %s", minutes)
 
-        packet = yj751_sys_pb2.PowerStandbySet()
-        packet.power_standby_min = max(0, min(minutes, 1440))
+        # Current value from pb_app_para_heartbeat.power_standby_mins
+        message = yj751_sys_pb2.PowerStandbySet(
+            power_standby_min=_bracket(0, minutes, 1440)
+        )
 
-        await self._send_command_packet(2, 2, 81, packet)
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0x02, cmd_id=0x51, message=message
+        )
         return True
 
-    async def set_screen_standby_sec(self, seconds: int):
+    async def set_screen_standby_seconds(self, seconds: int):
         """Send command to set LCD standby seconds"""
+        self._logger.debug("set_screen_standby_seconds: %s", seconds)
 
-        self._logger.debug("set_screen_standby_sec: %s", seconds)
+        # Current value from pb_app_para_heartbeat.screen_standby_sec
+        message = yj751_sys_pb2.ScreenStandbySet(
+            screen_standby_sec=_bracket(0, seconds, 1800)
+        )
 
-        packet = yj751_sys_pb2.ScreenStandbySet()
-        packet.screen_standby_sec = max(0, min(seconds, 1800))
-
-        await self._send_command_packet(2, 2, 82, packet)
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0x02, cmd_id=0x52, message=message
+        )
         return True
 
-    async def set_dc_standby_mins(self, minutes: int):
+    async def set_dc_standby_minutes(self, minutes: int):
         """Send command to set DC standby minutes"""
-
         self._logger.debug("set_dc_standby_mins: %s", minutes)
 
-        packet = yj751_sys_pb2.DCStandbySet()
-        packet.dc_standby_min = max(0, min(minutes, 1440))
+        # Current value from pb_app_para_heartbeat.dc_standby_mins
+        message = yj751_sys_pb2.DCStandbySet(dc_standby_min=_bracket(0, minutes, 1440))
 
-        await self._send_command_packet(2, 2, 84, packet)
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0x02, cmd_id=0x54, message=message
+        )
         return True
 
-    async def set_ac_standby_mins(self, minutes: int):
+    async def set_ac_standby_minutes(self, minutes: int):
         """Send command to set AC standby minutes"""
-
         self._logger.debug("set_ac_standby_mins: %s", minutes)
 
-        packet = yj751_sys_pb2.ACStandbySet()
-        packet.ac_standby_min = max(0, min(minutes, 1440))
+        # Current value from pb_app_para_heartbeat.ac_standby_mins
+        message = yj751_sys_pb2.ACStandbySet(ac_standby_min=_bracket(0, minutes, 1440))
 
-        await self._send_command_packet(2, 2, 83, packet)
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0x02, cmd_id=0x53, message=message
+        )
         return True
 
     async def request_heartbeat_info(self, param_type: int):
         """Send command to request heartbeat info"""
         # Report 8 = BackendRecordHeartbeatReport
-
         self._logger.debug("request_heartbeat_info: %s", param_type)
-        packet = yj751_sys_pb2.SystemParamGet()
-        packet.get_param_type = param_type
 
-        await self._send_command_packet(2, 2, 103, packet)
+        message = yj751_sys_pb2.SystemParamGet(get_param_type=param_type)
+
+        await self._send_command_packet(
+            dst=0x02, cmd_func=0x02, cmd_id=0x67, message=message
+        )
         return True
