@@ -27,14 +27,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from custom_components.ef_ble.eflib.devices import dpu
-
 from . import DeviceConfigEntry
 from .const import CONF_EXTRA_BATTERY, DOMAIN
 from .eflib import DeviceBase
 from .eflib.devices import (
     _delta3_base,
     delta_pro_3,
+    dpu,
     shp2,
     smart_generator,
     wave2,

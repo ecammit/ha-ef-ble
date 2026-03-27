@@ -1,4 +1,3 @@
-from collections.abc import Callable
 from enum import IntEnum
 from functools import partial
 
@@ -15,6 +14,7 @@ from ..props import (
     repeated_pb_field_type,
 )
 from ..props.enums import IntFieldValue
+from ..props.utils import pmultiply, prop_has_bit_off, prop_has_bit_on, pround
 
 pb_heartbeat = proto_attr_mapper(yj751_sys_pb2.AppShowHeartbeatReport)
 pb_backend_record_heartbeat = proto_attr_mapper(
@@ -72,40 +72,8 @@ class _BatteryTemperature(
         return item.bp_temp if item.bp_no == self.battery_no else None
 
 
-def _has_bit_on(bit_position: int) -> Callable[[int | None], bool]:
-    def transform(value: int | None) -> bool:
-        if value is None:
-            return False
-        return bool((value >> bit_position) & 1)
-
-    return transform
-
-
-def _has_bit_off(bit_position: int) -> Callable[[int | None], bool]:
-    def transform(value: int | None) -> bool:
-        if value is None:
-            return False
-        return not bool((value >> bit_position) & 1)
-
-    return transform
-
-
-def _round(x: int) -> Callable[[float | None], float | None]:
-    def transform(value: float | None) -> float | None:
-        return None if value is None else round(value, x)
-
-    return transform
-
-
-def _multiply(x: int) -> Callable[[float | None], float | None]:
-    def transform(value: float | None) -> float | None:
-        return None if value is None else value * x
-
-    return transform
-
-
-def _bracket(min, value, max):
-    return max(min, min(value, max))
+def _bracket(min_val, value, max_val):
+    return max(min_val, min(value, max_val))
 
 
 class Device(DeviceBase, ProtobufProps):
@@ -116,79 +84,79 @@ class Device(DeviceBase, ProtobufProps):
 
     # Bitmap for various binary states and the individual binary states therein
     show_flag = pb_field(pb_heartbeat.show_flag)
-    is_charging = pb_field(pb_heartbeat.show_flag, _has_bit_on(0))
-    dc_ports = pb_field(pb_heartbeat.show_flag, _has_bit_on(1))
-    slow_charging = pb_field(pb_heartbeat.show_flag, _has_bit_on(4))
-    ac_allowed = pb_field(pb_heartbeat.show_flag, _has_bit_off(9))
-    ac_ports = pb_field(pb_heartbeat.show_flag, _has_bit_on(2))
-    ac_ports_availability = pb_field(pb_heartbeat.show_flag, _has_bit_off(9))
+    is_charging = pb_field(pb_heartbeat.show_flag, prop_has_bit_on(0))
+    dc_ports = pb_field(pb_heartbeat.show_flag, prop_has_bit_on(1))
+    slow_charging = pb_field(pb_heartbeat.show_flag, prop_has_bit_on(4))
+    ac_allowed = pb_field(pb_heartbeat.show_flag, prop_has_bit_off(9))
+    ac_ports = pb_field(pb_heartbeat.show_flag, prop_has_bit_on(2))
+    ac_ports_availability = pb_field(pb_heartbeat.show_flag, prop_has_bit_off(9))
 
     battery_level = pb_field(pb_heartbeat.soc)
 
-    lv_solar_power = pb_field(pb_heartbeat.in_lv_mppt_pwr, _round(2))
-    lv_solar_voltage = pb_field(pb_backend_record_heartbeat.in_lv_mppt_vol, _round(2))
-    lv_solar_current = pb_field(pb_backend_record_heartbeat.in_lv_mppt_amp, _round(2))
-    lv_solar_temperature = pb_field(pb_backend_record_heartbeat.mppt_lv_temp, _round(2))
+    lv_solar_power = pb_field(pb_heartbeat.in_lv_mppt_pwr, pround(2))
+    lv_solar_voltage = pb_field(pb_backend_record_heartbeat.in_lv_mppt_vol, pround(2))
+    lv_solar_current = pb_field(pb_backend_record_heartbeat.in_lv_mppt_amp, pround(2))
+    lv_solar_temperature = pb_field(pb_backend_record_heartbeat.mppt_lv_temp, pround(2))
     lv_solar_error_code = pb_field(pb_backend_record_heartbeat.lv_pv_err_code)
 
-    hv_solar_power = pb_field(pb_heartbeat.in_hv_mppt_pwr, _round(2))
-    hv_solar_voltage = pb_field(pb_backend_record_heartbeat.in_hv_mppt_vol, _round(2))
-    hv_solar_current = pb_field(pb_backend_record_heartbeat.in_hv_mppt_amp, _round(2))
-    hv_solar_temperature = pb_field(pb_backend_record_heartbeat.mppt_hv_temp, _round(2))
+    hv_solar_power = pb_field(pb_heartbeat.in_hv_mppt_pwr, pround(2))
+    hv_solar_voltage = pb_field(pb_backend_record_heartbeat.in_hv_mppt_vol, pround(2))
+    hv_solar_current = pb_field(pb_backend_record_heartbeat.in_hv_mppt_amp, pround(2))
+    hv_solar_temperature = pb_field(pb_backend_record_heartbeat.mppt_hv_temp, pround(2))
     hv_solar_error_code = pb_field(pb_backend_record_heartbeat.hv_pv_err_code)
 
-    ac_5p8_in_power = pb_field(pb_heartbeat.in_ac_5p8_pwr, _round(2))
-    ac_5p8_in_voltage = pb_field(pb_backend_record_heartbeat.in_ac_5p8_vol, _round(2))
-    ac_5p8_in_current = pb_field(pb_backend_record_heartbeat.in_ac_5p8_amp, _round(2))
+    ac_5p8_in_power = pb_field(pb_heartbeat.in_ac_5p8_pwr, pround(2))
+    ac_5p8_in_voltage = pb_field(pb_backend_record_heartbeat.in_ac_5p8_vol, pround(2))
+    ac_5p8_in_current = pb_field(pb_backend_record_heartbeat.in_ac_5p8_amp, pround(2))
     ac_5p8_in_type = pb_field(
         pb_heartbeat.access_5p8_in_type, Access5p8InputType.from_value
     )
 
-    ac_c20_in_power = pb_field(pb_heartbeat.in_ac_c20_pwr, _round(2))
-    ac_c20_in_voltage = pb_field(pb_backend_record_heartbeat.in_ac_c20_vol, _round(2))
-    ac_c20_in_current = pb_field(pb_backend_record_heartbeat.in_ac_c20_amp, _round(2))
+    ac_c20_in_power = pb_field(pb_heartbeat.in_ac_c20_pwr, pround(2))
+    ac_c20_in_voltage = pb_field(pb_backend_record_heartbeat.in_ac_c20_vol, pround(2))
+    ac_c20_in_current = pb_field(pb_backend_record_heartbeat.in_ac_c20_amp, pround(2))
     ac_c20_in_type = pb_field(pb_backend_record_heartbeat.c20_in_type)
 
     hv_solar_weak = pb_field(
         pb_display_property_upload.plug_in_info_pv_weak_source_flag,
-        _has_bit_on(SolarSource.HV),
+        prop_has_bit_on(SolarSource.HV),
     )
     lv_solar_weak = pb_field(
         pb_display_property_upload.plug_in_info_pv_weak_source_flag,
-        _has_bit_on(SolarSource.LV),
+        prop_has_bit_on(SolarSource.LV),
     )
     hv_solar_low_voltage = pb_field(
         pb_display_property_upload.plug_in_info_pv_vol_low_flag,
-        _has_bit_on(SolarSource.HV),
+        prop_has_bit_on(SolarSource.HV),
     )
     lv_solar_low_voltage = pb_field(
         pb_display_property_upload.plug_in_info_pv_vol_low_flag,
-        _has_bit_on(SolarSource.LV),
+        prop_has_bit_on(SolarSource.LV),
     )
 
     ac_in_freq = pb_field(pb_backend_record_heartbeat.ac_in_freq)
     ac_out_freq = pb_field(pb_backend_record_heartbeat.ac_out_freq)
 
-    battery_voltage = pb_field(pb_backend_record_heartbeat.bat_vol, _round(2))
-    battery_current = pb_field(pb_backend_record_heartbeat.bat_amp, _round(2))
+    battery_voltage = pb_field(pb_backend_record_heartbeat.bat_vol, pround(2))
+    battery_current = pb_field(pb_backend_record_heartbeat.bat_amp, pround(2))
 
     battery_input_power = pb_field(
-        pb_backend_record_heartbeat.bms_input_watts, _round(2)
+        pb_backend_record_heartbeat.bms_input_watts, pround(2)
     )
     battery_output_power = pb_field(
-        pb_backend_record_heartbeat.bms_output_watts, _round(2)
+        pb_backend_record_heartbeat.bms_output_watts, pround(2)
     )
 
     dc_inverter_temperature = pb_field(
-        pb_backend_record_heartbeat.pcs_dc_temp, _round(2)
+        pb_backend_record_heartbeat.pcs_dc_temp, pround(2)
     )
     dc_inverter_error_code = pb_field(pb_backend_record_heartbeat.pcs_dc_err_code)
     ac_inverter_temperature = pb_field(
-        pb_backend_record_heartbeat.pcs_ac_temp, _round(2)
+        pb_backend_record_heartbeat.pcs_ac_temp, pround(2)
     )
     ac_inverter_error_code = pb_field(pb_backend_record_heartbeat.pcs_ac_err_code)
 
-    system_temperature = pb_field(pb_backend_record_heartbeat.pd_temp, _round(2))
+    system_temperature = pb_field(pb_backend_record_heartbeat.pd_temp, pround(2))
 
     input_power = pb_field(pb_heartbeat.watts_in_sum)
     output_power = pb_field(pb_heartbeat.watts_out_sum)
@@ -204,92 +172,92 @@ class Device(DeviceBase, ProtobufProps):
     )
 
     usb1_out_power = pb_field(pb_heartbeat.out_usb1_pwr)
-    usb1_out_voltage = pb_field(pb_backend_record_heartbeat.out_usb1_vol, _round(2))
-    usb1_out_current = pb_field(pb_backend_record_heartbeat.out_usb1_amp, _round(2))
+    usb1_out_voltage = pb_field(pb_backend_record_heartbeat.out_usb1_vol, pround(2))
+    usb1_out_current = pb_field(pb_backend_record_heartbeat.out_usb1_amp, pround(2))
 
     usb2_out_power = pb_field(pb_heartbeat.out_usb2_pwr)
-    usb2_out_voltage = pb_field(pb_backend_record_heartbeat.out_usb2_vol, _round(2))
-    usb2_out_current = pb_field(pb_backend_record_heartbeat.out_usb2_amp, _round(2))
+    usb2_out_voltage = pb_field(pb_backend_record_heartbeat.out_usb2_vol, pround(2))
+    usb2_out_current = pb_field(pb_backend_record_heartbeat.out_usb2_amp, pround(2))
 
     typec1_out_power = pb_field(pb_heartbeat.out_typec1_pwr)
-    typec1_out_voltage = pb_field(pb_backend_record_heartbeat.out_typec1_vol, _round(2))
-    typec1_out_current = pb_field(pb_backend_record_heartbeat.out_typec1_amp, _round(2))
+    typec1_out_voltage = pb_field(pb_backend_record_heartbeat.out_typec1_vol, pround(2))
+    typec1_out_current = pb_field(pb_backend_record_heartbeat.out_typec1_amp, pround(2))
 
     typec2_out_power = pb_field(pb_heartbeat.out_typec2_pwr)
-    typec2_out_voltage = pb_field(pb_backend_record_heartbeat.out_typec2_vol, _round(2))
-    typec2_out_current = pb_field(pb_backend_record_heartbeat.out_typec2_amp, _round(2))
+    typec2_out_voltage = pb_field(pb_backend_record_heartbeat.out_typec2_vol, pround(2))
+    typec2_out_current = pb_field(pb_backend_record_heartbeat.out_typec2_amp, pround(2))
 
     anderson_out_power = pb_field(pb_heartbeat.out_ads_pwr)
-    anderson_out_voltage = pb_field(pb_backend_record_heartbeat.out_ads_vol, _round(2))
-    anderson_out_current = pb_field(pb_backend_record_heartbeat.out_ads_amp, _round(2))
+    anderson_out_voltage = pb_field(pb_backend_record_heartbeat.out_ads_vol, pround(2))
+    anderson_out_current = pb_field(pb_backend_record_heartbeat.out_ads_amp, pround(2))
     anderson_out_error_code = pb_field(pb_backend_record_heartbeat.ads_err_code)
 
     ac_l1_1_out_power = pb_field(pb_heartbeat.out_ac_l1_1_pwr)
     ac_l1_1_out_voltage = pb_field(
-        pb_backend_record_heartbeat.out_ac_l1_1_vol, _round(2)
+        pb_backend_record_heartbeat.out_ac_l1_1_vol, pround(2)
     )
     ac_l1_1_out_current = pb_field(
-        pb_backend_record_heartbeat.out_ac_l1_1_amp, _round(2)
+        pb_backend_record_heartbeat.out_ac_l1_1_amp, pround(2)
     )
     ac_l1_1_out_power_factor = pb_field(
-        pb_backend_record_heartbeat.out_ac_l1_1_pf, _multiply(100)
+        pb_backend_record_heartbeat.out_ac_l1_1_pf, pmultiply(100)
     )
 
     ac_l1_2_out_power = pb_field(pb_heartbeat.out_ac_l1_2_pwr)
     ac_l1_2_out_voltage = pb_field(
-        pb_backend_record_heartbeat.out_ac_l1_2_vol, _round(2)
+        pb_backend_record_heartbeat.out_ac_l1_2_vol, pround(2)
     )
     ac_l1_2_out_current = pb_field(
-        pb_backend_record_heartbeat.out_ac_l1_2_amp, _round(2)
+        pb_backend_record_heartbeat.out_ac_l1_2_amp, pround(2)
     )
     ac_l1_2_out_power_factor = pb_field(
-        pb_backend_record_heartbeat.out_ac_l1_2_pf, _multiply(100)
+        pb_backend_record_heartbeat.out_ac_l1_2_pf, pmultiply(100)
     )
 
     ac_l2_1_out_power = pb_field(pb_heartbeat.out_ac_l2_1_pwr)
     ac_l2_1_out_voltage = pb_field(
-        pb_backend_record_heartbeat.out_ac_l2_1_vol, _round(2)
+        pb_backend_record_heartbeat.out_ac_l2_1_vol, pround(2)
     )
     ac_l2_1_out_current = pb_field(
-        pb_backend_record_heartbeat.out_ac_l2_1_amp, _round(2)
+        pb_backend_record_heartbeat.out_ac_l2_1_amp, pround(2)
     )
     ac_l2_1_out_power_factor = pb_field(
-        pb_backend_record_heartbeat.out_ac_l2_1_pf, _multiply(100)
+        pb_backend_record_heartbeat.out_ac_l2_1_pf, pmultiply(100)
     )
 
     ac_l2_2_out_power = pb_field(pb_heartbeat.out_ac_l2_2_pwr)
     ac_l2_2_out_voltage = pb_field(
-        pb_backend_record_heartbeat.out_ac_l2_2_vol, _round(2)
+        pb_backend_record_heartbeat.out_ac_l2_2_vol, pround(2)
     )
     ac_l2_2_out_current = pb_field(
-        pb_backend_record_heartbeat.out_ac_l2_2_amp, _round(2)
+        pb_backend_record_heartbeat.out_ac_l2_2_amp, pround(2)
     )
     ac_l2_2_out_power_factor = pb_field(
-        pb_backend_record_heartbeat.out_ac_l2_2_pf, _multiply(100)
+        pb_backend_record_heartbeat.out_ac_l2_2_pf, pmultiply(100)
     )
 
     ac_tt_out_power = pb_field(pb_heartbeat.out_ac_tt_pwr)
-    ac_tt_out_voltage = pb_field(pb_backend_record_heartbeat.out_ac_tt_vol, _round(2))
-    ac_tt_out_current = pb_field(pb_backend_record_heartbeat.out_ac_tt_amp, _round(2))
+    ac_tt_out_voltage = pb_field(pb_backend_record_heartbeat.out_ac_tt_vol, pround(2))
+    ac_tt_out_current = pb_field(pb_backend_record_heartbeat.out_ac_tt_amp, pround(2))
     ac_tt_out_power_factor = pb_field(
-        pb_backend_record_heartbeat.out_ac_tt_pf, _multiply(100)
+        pb_backend_record_heartbeat.out_ac_tt_pf, pmultiply(100)
     )
 
     ac_l14_out_power = pb_field(pb_heartbeat.out_ac_l14_pwr)
-    ac_l14_out_voltage = pb_field(pb_backend_record_heartbeat.out_ac_l14_vol, _round(2))
-    ac_l14_out_current = pb_field(pb_backend_record_heartbeat.out_ac_l14_amp, _round(2))
+    ac_l14_out_voltage = pb_field(pb_backend_record_heartbeat.out_ac_l14_vol, pround(2))
+    ac_l14_out_current = pb_field(pb_backend_record_heartbeat.out_ac_l14_amp, pround(2))
     ac_l14_out_power_factor = pb_field(
-        pb_backend_record_heartbeat.out_ac_l14_pf, _multiply(100)
+        pb_backend_record_heartbeat.out_ac_l14_pf, pmultiply(100)
     )
 
     ac_5p8_out_type = pb_field(
         pb_heartbeat.access_5p8_out_type, Access5p8OutputType.from_value
     )
     ac_5p8_out_power = pb_field(pb_heartbeat.out_ac_5p8_pwr)
-    ac_5p8_out_voltage = pb_field(pb_backend_record_heartbeat.out_ac_5p8_vol, _round(2))
-    ac_5p8_out_current = pb_field(pb_backend_record_heartbeat.out_ac_5p8_amp, _round(2))
+    ac_5p8_out_voltage = pb_field(pb_backend_record_heartbeat.out_ac_5p8_vol, pround(2))
+    ac_5p8_out_current = pb_field(pb_backend_record_heartbeat.out_ac_5p8_amp, pround(2))
     ac_5p8_out_power_factor = pb_field(
-        pb_backend_record_heartbeat.out_ac_5p8_pf, _multiply(100)
+        pb_backend_record_heartbeat.out_ac_5p8_pf, pmultiply(100)
     )
 
     backup_discharge_limit = pb_field(pb_app_para_heartbeat.dsg_min_soc)
@@ -311,7 +279,6 @@ class Device(DeviceBase, ProtobufProps):
     ac_5p8_min_charging_power = 600
     ac_5p8_max_charging_power = 7200
     ac_5p8_charging_power = pb_field(pb_app_para_heartbeat.chg_5p8_set_watts)
-    ac_5p8_charging_power_availability = True
 
     ac_c20_min_charging_power = 600
     ac_c20_max_charging_power = 1800
@@ -319,7 +286,7 @@ class Device(DeviceBase, ProtobufProps):
     ac_c20_charging_power_availability = pb_field(
         # slow charging switch must be enabled
         pb_heartbeat.show_flag,
-        _has_bit_on(4),
+        prop_has_bit_on(4),
     )
 
     # Properties for un-implemented controls and sensors
@@ -334,7 +301,7 @@ class Device(DeviceBase, ProtobufProps):
     # ac_always_on = pb_field(pb_app_para_heartbeat.ac_often_open_flg, bool)
     # ac_always_on_soc = pb_field(pb_app_para_heartbeat.ac_often_open_min_soc, int)
     # ev_max_charger_cur = pb_field(
-    #     pb_backend_record_heartbeat.ev_max_charger_cur, _round(2)
+    #     pb_backend_record_heartbeat.ev_max_charger_cur, pround(2)
     # )
     # fan_running = pb_field(pb_backend_record_heartbeat.fan_state, bool)
 

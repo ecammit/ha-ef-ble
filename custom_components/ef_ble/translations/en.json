@@ -292,22 +292,22 @@
         "name": "Is Charging"
       },
       "slow_charging": {
-          "name": "Slow Charging Switch"
+        "name": "Slow Charging Switch"
       },
       "ac_allowed": {
-          "name": "AC Allowed"
+        "name": "AC Allowed"
       },
       "hv_solar_weak": {
-          "name": "Weak HV Solar Source"
+        "name": "Weak HV Solar Source"
       },
       "lv_solar_weak": {
-          "name": "Weak LV Solar Source"
+        "name": "Weak LV Solar Source"
       },
       "hv_solar_low_voltage": {
-          "name": "HV Solar Voltage Low"
+        "name": "HV Solar Voltage Low"
       },
       "lv_solar_low_voltage": {
-          "name": "LV Solar Voltage Low"
+        "name": "LV Solar Voltage Low"
       }
     },
     "sensor": {

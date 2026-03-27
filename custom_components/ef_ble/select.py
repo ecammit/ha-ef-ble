@@ -227,25 +227,6 @@ class EcoflowSelect(EcoflowEntity, SelectEntity):
 
         return self._attr_available
 
-    async def async_added_to_hass(self):
-        """Run when this Entity has been added to HA."""
-        await super().async_added_to_hass()
-
-        if self._availability_prop is not None:
-            self._device.register_state_update_callback(
-                self.availability_updated,
-                self._availability_prop,
-            )
-
-    async def async_will_remove_from_hass(self) -> None:
-        """Entity being removed from hass."""
-        await super().async_will_remove_from_hass()
-        if self._availability_prop is not None:
-            self._device.remove_state_update_callback(
-                self.availability_updated,
-                self._availability_prop,
-            )
-
     @callback
     def availability_updated(self, state: bool):
         self._attr_available = state
