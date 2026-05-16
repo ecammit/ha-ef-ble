@@ -229,6 +229,7 @@ class Connection:
         self._packet_version = packet_version
         self._encrypt_type = encrypt_type
         self._encryption: EncryptionStrategy | None = None
+        self._initial_session_key: bytes = b""
         self._simple_assembler = SimplePacketAssembler()
         self._options = Connection.Options()
 
@@ -631,6 +632,11 @@ class Connection:
         if state.is_error:
             self._notify_disconnect(exc)
 
+    def set_state(
+        self, state: ConnectionState, exc: Exception | type[Exception] | None = None
+    ) -> None:
+        self._set_state(state, exc)
+
     def _get_characteristics(self, char_type: Literal["write", "notify"]):
         assert self._client is not None
 
@@ -944,6 +950,7 @@ class Connection:
 
         # Parse the data that contains sRand (first 16 bytes) & seed (last 2 bytes)
         session_key = await self.genSessionKey(data[16:18], data[:16])
+        self._initial_session_key = self._encryption.session_key
         self._encryption = Type7Encryption(session_key, self._encryption.iv)
 
         await self.getAuthStatus()
