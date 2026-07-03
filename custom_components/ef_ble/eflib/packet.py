@@ -1,5 +1,6 @@
 import logging
 import struct
+from functools import cached_property
 from typing import TypeGuard
 
 from .crc import crc8, crc16
@@ -39,9 +40,6 @@ class Packet:
         self._seq = seq if seq is not None else b"\x00\x00\x00\x00"
         self._product_id = product_id
 
-        # For representation
-        self._payload_hex = bytearray(self._payload).hex()
-
     @property
     def src(self):
         return self._src
@@ -62,9 +60,9 @@ class Packet:
     def payload(self):
         return self._payload
 
-    @property
+    @cached_property
     def payloadHex(self):
-        return self._payload_hex
+        return bytearray(self._payload).hex()
 
     @property
     def dsrc(self):
@@ -196,7 +194,7 @@ class Packet:
             f"dst=0x{self._dst:02X}, "
             f"cmd_set=0x{self._cmd_set:02X}, "
             f"cmd_id=0x{self._cmd_id:02X}, "
-            f"payload=bytes.fromhex('{self._payload_hex}'), "
+            f"payload=bytes.fromhex('{self.payloadHex}'), "
             f"dsrc=0x{self._dsrc:02X}, "
             f"ddst=0x{self._ddst:02X}, "
             f"version=0x{self._version:02X}, "
