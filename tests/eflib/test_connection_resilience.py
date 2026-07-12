@@ -1,7 +1,8 @@
 import pytest
+from bleak_retry_connector import BleakOutOfConnectionSlotsError
 from pytest_mock import MockerFixture
 
-from custom_components.ef_ble.eflib.connection import Connection
+from custom_components.ef_ble.eflib.connection import Connection, ConnectionState
 
 
 @pytest.fixture
@@ -37,3 +38,15 @@ def test_ble_dev_falls_back_to_cached_device_when_resolver_returns_none(
     connection.with_ble_device_resolver(lambda: None)
 
     assert connection.ble_dev() is cached
+
+
+async def test_connect_records_out_of_slots_error(connection, mocker: MockerFixture):
+    mocker.patch(
+        "custom_components.ef_ble.eflib.connection.establish_connection",
+        side_effect=BleakOutOfConnectionSlotsError("no free slots"),
+    )
+    connection.with_disabled_reconnect()
+
+    await connection.connect(max_attempts=1)
+
+    assert connection._last_state == ConnectionState.ERROR_OUT_OF_SLOTS
