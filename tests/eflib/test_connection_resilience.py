@@ -1,3 +1,5 @@
+import time
+
 import pytest
 from bleak_retry_connector import BleakOutOfConnectionSlotsError
 from pytest_mock import MockerFixture
@@ -5,6 +7,7 @@ from pytest_mock import MockerFixture
 from custom_components.ef_ble.eflib.connection import (
     RECONNECT_BASE_DELAY,
     RECONNECT_MAX_DELAY,
+    WATCHDOG_TIMEOUT,
     Connection,
     ConnectionState,
     _next_reconnect_delay,
@@ -30,7 +33,7 @@ def test_next_reconnect_delay_jitter_stays_within_bounds():
 
 
 @pytest.fixture
-def connection(mocker: MockerFixture):
+async def connection(mocker: MockerFixture):
     ble_dev = mocker.Mock()
     ble_dev.address = "AA:BB:CC:DD:EE:FF"
     conn = Connection(
@@ -74,3 +77,25 @@ async def test_connect_records_out_of_slots_error(connection, mocker: MockerFixt
     await connection.connect(max_attempts=1)
 
     assert connection._last_state == ConnectionState.ERROR_OUT_OF_SLOTS
+
+
+async def test_watchdog_forces_disconnect_after_timeout(
+    connection, mocker: MockerFixture
+):
+    disconnect_client = mocker.patch.object(connection, "_disconnect_client")
+    connection._last_activity = time.monotonic() - (WATCHDOG_TIMEOUT + 1)
+
+    await connection._watchdog_check()
+
+    disconnect_client.assert_awaited_once()
+
+
+async def test_watchdog_does_not_disconnect_when_recently_active(
+    connection, mocker: MockerFixture
+):
+    disconnect_client = mocker.patch.object(connection, "_disconnect_client")
+    connection._last_activity = time.monotonic()
+
+    await connection._watchdog_check()
+
+    disconnect_client.assert_not_awaited()
