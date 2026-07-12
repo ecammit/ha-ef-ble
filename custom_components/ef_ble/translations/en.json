@@ -69,11 +69,13 @@
             "description": "These options affect the Bluetooth connection behavior. Only change them if you are experiencing connectivity issues.",
             "data": {
               "connection_timeout": "Connection timeout",
-              "bluez_start_notify": "Use BlueZ start notify"
+              "bluez_start_notify": "Use BlueZ start notify",
+              "watchdog_enabled": "Enable connection watchdog"
             },
             "data_description": {
               "connection_timeout": "Number of seconds to wait for the device to connect and authenticate.",
-              "bluez_start_notify": "Try enabling this if you experience frequent disconnects when multiple BLE devices are connected, or if you see `AcquireNotify: Read error` / `Unexpected EOF on notification file handle` in your logs."
+              "bluez_start_notify": "Try enabling this if you experience frequent disconnects when multiple BLE devices are connected, or if you see `AcquireNotify: Read error` / `Unexpected EOF on notification file handle` in your logs.",
+              "watchdog_enabled": "Force a reconnect if no data is received from the device for a while, even though the connection still looks alive. Useful for ESP32 Bluetooth proxies that can silently drop the link."
             }
           }
         }
@@ -126,11 +128,13 @@
             "description": "These options affect the Bluetooth connection behavior. Only change them if you are experiencing connectivity issues.",
             "data": {
               "connection_timeout": "Connection timeout",
-              "bluez_start_notify": "Use BlueZ start notify"
+              "bluez_start_notify": "Use BlueZ start notify",
+              "watchdog_enabled": "Enable connection watchdog"
             },
             "data_description": {
               "connection_timeout": "Number of seconds to wait for the device to connect and authenticate.",
-              "bluez_start_notify": "Try enabling this if you experience frequent disconnects when multiple BLE devices are connected, or if you see `AcquireNotify: Read error` / `Unexpected EOF on notification file handle` in your logs."
+              "bluez_start_notify": "Try enabling this if you experience frequent disconnects when multiple BLE devices are connected, or if you see `AcquireNotify: Read error` / `Unexpected EOF on notification file handle` in your logs.",
+              "watchdog_enabled": "Force a reconnect if no data is received from the device for a while, even though the connection still looks alive. Useful for ESP32 Bluetooth proxies that can silently drop the link."
             }
           }
         }
@@ -178,11 +182,13 @@
             "description": "These options affect the Bluetooth connection behavior. Only change them if you are experiencing connectivity issues.",
             "data": {
               "connection_timeout": "Connection timeout",
-              "bluez_start_notify": "Use BlueZ start notify"
+              "bluez_start_notify": "Use BlueZ start notify",
+              "watchdog_enabled": "Enable connection watchdog"
             },
             "data_description": {
               "connection_timeout": "Number of seconds to wait for the device to connect and authenticate.",
-              "bluez_start_notify": "Try enabling this if you experience frequent disconnects when multiple BLE devices are connected, or if you see `AcquireNotify: Read error` / `Unexpected EOF on notification file handle` in your logs."
+              "bluez_start_notify": "Try enabling this if you experience frequent disconnects when multiple BLE devices are connected, or if you see `AcquireNotify: Read error` / `Unexpected EOF on notification file handle` in your logs.",
+              "watchdog_enabled": "Force a reconnect if no data is received from the device for a while, even though the connection still looks alive. Useful for ESP32 Bluetooth proxies that can silently drop the link."
             }
           }
         }
@@ -248,11 +254,13 @@
             "description": "These options affect the Bluetooth connection behavior. Only change them if you are experiencing connectivity issues.",
             "data": {
               "connection_timeout": "Connection timeout",
-              "bluez_start_notify": "Use BlueZ start notify"
+              "bluez_start_notify": "Use BlueZ start notify",
+              "watchdog_enabled": "Enable connection watchdog"
             },
             "data_description": {
               "connection_timeout": "Number of seconds to wait for the device to connect and authenticate.",
-              "bluez_start_notify": "Try enabling this if you experience frequent disconnects when multiple BLE devices are connected, or if you see `AcquireNotify: Read error` / `Unexpected EOF on notification file handle` in your logs."
+              "bluez_start_notify": "Try enabling this if you experience frequent disconnects when multiple BLE devices are connected, or if you see `AcquireNotify: Read error` / `Unexpected EOF on notification file handle` in your logs.",
+              "watchdog_enabled": "Force a reconnect if no data is received from the device for a while, even though the connection still looks alive. Useful for ESP32 Bluetooth proxies that can silently drop the link."
             }
           }
         }

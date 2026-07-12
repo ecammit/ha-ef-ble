@@ -99,3 +99,19 @@ async def test_watchdog_does_not_disconnect_when_recently_active(
     await connection._watchdog_check()
 
     disconnect_client.assert_not_awaited()
+
+
+def test_options_default_watchdog_enabled():
+    assert Connection.Options().watchdog_enabled is True
+
+
+async def test_watchdog_disabled_via_options_does_not_disconnect(
+    connection, mocker: MockerFixture
+):
+    disconnect_client = mocker.patch.object(connection, "_disconnect_client")
+    connection._options.watchdog_enabled = False
+    connection._last_activity = time.monotonic() - (WATCHDOG_TIMEOUT + 1)
+
+    await connection._watchdog_check()
+
+    disconnect_client.assert_not_awaited()

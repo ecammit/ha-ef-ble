@@ -36,6 +36,7 @@ from .const import (
     CONF_PACKET_VERSION,
     CONF_UPDATE_PERIOD,
     CONF_USER_ID,
+    CONF_WATCHDOG_ENABLED,
     DEFAULT_CONNECTION_TIMEOUT,
     DEFAULT_UPDATE_PERIOD,
     DOMAIN,
@@ -122,6 +123,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: DeviceConfigEntry) -> bo
     options = Connection.Options(
         timeout=timeout,
         bluez_start_notify=advanced.get(CONF_BLUEZ_START_NOTIFY, False),
+        watchdog_enabled=advanced.get(CONF_WATCHDOG_ENABLED, True),
     )
     issue_id = f"{entry.entry_id}_max_connection_attempts"
 
@@ -336,6 +338,7 @@ async def _update_listener(hass: HomeAssistant, entry: DeviceConfigEntry):
     options = Connection.Options(
         timeout=advanced.get(CONF_CONNECTION_TIMEOUT, DEFAULT_CONNECTION_TIMEOUT),
         bluez_start_notify=advanced.get(CONF_BLUEZ_START_NOTIFY, False),
+        watchdog_enabled=advanced.get(CONF_WATCHDOG_ENABLED, True),
     )
 
     (

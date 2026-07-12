@@ -236,6 +236,7 @@ class Connection:
 
         timeout: int = 20
         bluez_start_notify: bool = False
+        watchdog_enabled: bool = True
 
     _listeners = _ConnectionListeners.create()
 
@@ -350,9 +351,7 @@ class Connection:
                 self._ble_dev = resolved
         return self._ble_dev
 
-    def with_ble_device_resolver(
-        self, resolver: Callable[[], BLEDevice | None] | None
-    ):
+    def with_ble_device_resolver(self, resolver: Callable[[], BLEDevice | None] | None):
         """Set a callback to refresh the BLEDevice before each connect attempt."""
         self._ble_device_resolver = resolver
         return self
@@ -524,6 +523,8 @@ class Connection:
         await self.connect()
 
     async def _watchdog_check(self) -> None:
+        if not self._options.watchdog_enabled:
+            return
         if time.monotonic() - self._last_activity > WATCHDOG_TIMEOUT:
             self._logger.warning(
                 "No data received in over %ds, forcing reconnect", WATCHDOG_TIMEOUT
