@@ -21,6 +21,7 @@ from bleak.exc import BleakError
 from bleak_retry_connector import (
     MAX_CONNECT_ATTEMPTS,
     BleakNotFoundError,
+    BleakOutOfConnectionSlotsError,
     close_stale_connections_by_address,
     establish_connection,
 )
@@ -98,6 +99,7 @@ class ConnectionState(StrEnum):
     ERROR_TIMEOUT = auto()
     ERROR_NOT_FOUND = auto()
     ERROR_BLEAK = auto()
+    ERROR_OUT_OF_SLOTS = auto()
     ERROR_PACKET_PARSE = auto()
     ERROR_SEND_REQUEST = auto()
     ERROR_UNKNOWN = auto()
@@ -116,6 +118,7 @@ class ConnectionState(StrEnum):
             ERROR_TIMEOUT,
             ERROR_NOT_FOUND,
             ERROR_BLEAK,
+            ERROR_OUT_OF_SLOTS,
         ]
     )
 
@@ -404,6 +407,9 @@ class Connection:
         except BleakNotFoundError as e:
             error = e
             self._set_state(ConnectionState.ERROR_NOT_FOUND, e)
+        except BleakOutOfConnectionSlotsError as e:
+            error = e
+            self._set_state(ConnectionState.ERROR_OUT_OF_SLOTS, e)
         except BleakError as e:
             error = e
             self._set_state(ConnectionState.ERROR_BLEAK, e)

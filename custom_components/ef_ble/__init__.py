@@ -43,6 +43,7 @@ from .const import (
 from .eflib.connection import (
     BleakError,
     Connection,
+    ConnectionState,
     ConnectionTimeout,
     MaxConnectionAttemptsReached,
 )
@@ -178,11 +179,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: DeviceConfigEntry) -> bo
         ) from e
     else:
         if not state.authenticated:
-            await device.disconnect()
-            raise ConfigEntryNotReady(
-                translation_key="failed_after_successful_connection",
-                translation_placeholders={"last_state": state},
-            )
+            await _handle_unauthenticated_connection(hass, entry, device, state)
     ir.async_delete_issue(hass, DOMAIN, issue_id)
 
     _LOGGER.debug("Creating entities")
@@ -200,6 +197,35 @@ async def async_setup_entry(hass: HomeAssistant, entry: DeviceConfigEntry) -> bo
     entry.async_on_unload(device.on_disconnect(_on_disconnect))
 
     return True
+
+
+async def _handle_unauthenticated_connection(
+    hass: HomeAssistant,
+    entry: DeviceConfigEntry,
+    device: eflib.DeviceBase,
+    state: ConnectionState,
+) -> None:
+    await device.disconnect()
+    if state is ConnectionState.ERROR_OUT_OF_SLOTS:
+        _create_out_of_slots_issue(hass, entry, device.name)
+    raise ConfigEntryNotReady(
+        translation_key="failed_after_successful_connection",
+        translation_placeholders={"last_state": state},
+    )
+
+
+def _create_out_of_slots_issue(
+    hass: HomeAssistant, entry: DeviceConfigEntry, device_name: str
+) -> None:
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        f"{entry.entry_id}_out_of_slots",
+        is_fixable=False,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key="ble_out_of_connection_slots",
+        translation_placeholders={"device_name": device_name},
+    )
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: DeviceConfigEntry) -> bool:
