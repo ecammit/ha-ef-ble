@@ -124,6 +124,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: DeviceConfigEntry) -> bo
     )
     issue_id = f"{entry.entry_id}_max_connection_attempts"
 
+    def _resolve_ble_device():
+        return bluetooth.async_ble_device_from_address(hass, address, connectable=True)
+
     try:
         await (
             device.with_update_period(update_period)
@@ -133,6 +136,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: DeviceConfigEntry) -> bo
             .with_enabled_packet_diagnostics(packet_collection_enabled)
             .with_diagnostics_on_exception(diagnostics_on_exception)
             .with_connection_options(options)
+            .with_ble_device_resolver(_resolve_ble_device)
             .connect(
                 user_id=user_id,
                 max_attempts=0 if eflib.is_solar_only(device) else None,

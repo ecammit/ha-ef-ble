@@ -95,6 +95,7 @@ class DeviceBase(abc.ABC):
         self._packet_version = 0x03
 
         self._reconnect_disabled = False
+        self._ble_device_resolver: Callable[[], BLEDevice | None] | None = None
         self._options = Connection.Options()
         self._diagnostics = DeviceDiagnosticsCollector(self)
 
@@ -218,6 +219,12 @@ class DeviceBase(abc.ABC):
             self._conn.with_disabled_reconnect(is_disabled)
         return self
 
+    def with_ble_device_resolver(self, resolver: Callable[[], BLEDevice | None] | None):
+        self._ble_device_resolver = resolver
+        if self._conn is not None:
+            self._conn.with_ble_device_resolver(resolver)
+        return self
+
     def with_connection_options(self, options: Connection.Options):
         """Set connection options."""
         self._options = options
@@ -282,6 +289,7 @@ class DeviceBase(abc.ABC):
                 )
                 .with_logging_options(self._logger.options)
                 .with_disabled_reconnect(self._reconnect_disabled)
+                .with_ble_device_resolver(self._ble_device_resolver)
                 .with_options(self._options)
             )
             self._connection_event.set()
