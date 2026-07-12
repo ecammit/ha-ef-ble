@@ -923,6 +923,14 @@ class _SchemaBuilder:
                             ),
                         )
                         .optional(
+                            CONF_MAX_RECONNECT_ATTEMPTS,
+                            vol.All(int, vol.Range(min=0)),
+                            advanced.get(
+                                CONF_MAX_RECONNECT_ATTEMPTS,
+                                DEFAULT_MAX_RECONNECT_ATTEMPTS,
+                            ),
+                        )
+                        .optional(
                             CONF_BLUEZ_START_NOTIFY,
                             bool,
                             advanced.get(CONF_BLUEZ_START_NOTIFY, False),
@@ -931,14 +939,6 @@ class _SchemaBuilder:
                             CONF_WATCHDOG_ENABLED,
                             bool,
                             advanced.get(CONF_WATCHDOG_ENABLED, True),
-                        )
-                        .optional(
-                            CONF_MAX_RECONNECT_ATTEMPTS,
-                            vol.All(int, vol.Range(min=0)),
-                            advanced.get(
-                                CONF_MAX_RECONNECT_ATTEMPTS,
-                                DEFAULT_MAX_RECONNECT_ATTEMPTS,
-                            ),
                         )
                         .build()
                     ),
