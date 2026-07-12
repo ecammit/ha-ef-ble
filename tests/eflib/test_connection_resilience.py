@@ -2,7 +2,31 @@ import pytest
 from bleak_retry_connector import BleakOutOfConnectionSlotsError
 from pytest_mock import MockerFixture
 
-from custom_components.ef_ble.eflib.connection import Connection, ConnectionState
+from custom_components.ef_ble.eflib.connection import (
+    RECONNECT_BASE_DELAY,
+    RECONNECT_MAX_DELAY,
+    Connection,
+    ConnectionState,
+    _next_reconnect_delay,
+)
+
+
+@pytest.mark.parametrize(
+    ("attempt", "expected_base"),
+    [(1, 10.0), (2, 20.0), (3, 40.0), (4, 60.0), (5, 60.0)],
+)
+def test_next_reconnect_delay_grows_and_caps(
+    mocker: MockerFixture, attempt, expected_base
+):
+    mocker.patch("random.uniform", return_value=0.0)
+    assert _next_reconnect_delay(attempt) == expected_base
+
+
+def test_next_reconnect_delay_jitter_stays_within_bounds():
+    for attempt in range(1, 6):
+        base = min(RECONNECT_BASE_DELAY * (2 ** (attempt - 1)), RECONNECT_MAX_DELAY)
+        delay = _next_reconnect_delay(attempt)
+        assert base <= delay <= base * 1.2
 
 
 @pytest.fixture
