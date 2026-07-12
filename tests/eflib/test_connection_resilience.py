@@ -5,6 +5,7 @@ from bleak_retry_connector import BleakOutOfConnectionSlotsError
 from pytest_mock import MockerFixture
 
 from custom_components.ef_ble.eflib.connection import (
+    MAX_RECONNECT_ATTEMPTS,
     RECONNECT_BASE_DELAY,
     RECONNECT_MAX_DELAY,
     WATCHDOG_TIMEOUT,
@@ -101,8 +102,11 @@ async def test_watchdog_does_not_disconnect_when_recently_active(
     disconnect_client.assert_not_awaited()
 
 
-def test_options_default_watchdog_enabled():
-    assert Connection.Options().watchdog_enabled is True
+def test_options_default_watchdog_enabled_and_max_reconnect_attempts():
+    options = Connection.Options()
+
+    assert options.watchdog_enabled is True
+    assert options.max_reconnect_attempts == MAX_RECONNECT_ATTEMPTS
 
 
 async def test_watchdog_disabled_via_options_does_not_disconnect(
@@ -115,3 +119,15 @@ async def test_watchdog_disabled_via_options_does_not_disconnect(
     await connection._watchdog_check()
 
     disconnect_client.assert_not_awaited()
+
+
+async def test_reconnect_honors_max_reconnect_attempts_option(connection):
+    connection._options.max_reconnect_attempts = 1
+    connection._reconnect_attempt = 1
+
+    await connection.reconnect()
+
+    assert (
+        connection._connection_state
+        == ConnectionState.ERROR_MAX_RECONNECT_ATTEMPTS_REACHED
+    )

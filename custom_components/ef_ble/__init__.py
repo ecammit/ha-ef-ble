@@ -33,11 +33,13 @@ from .const import (
     CONF_DIAGNOSTICS_ON_EXCEPTION,
     CONF_DIAGNOSTICS_OPTIONS,
     CONF_EXTRA_BATTERY,
+    CONF_MAX_RECONNECT_ATTEMPTS,
     CONF_PACKET_VERSION,
     CONF_UPDATE_PERIOD,
     CONF_USER_ID,
     CONF_WATCHDOG_ENABLED,
     DEFAULT_CONNECTION_TIMEOUT,
+    DEFAULT_MAX_RECONNECT_ATTEMPTS,
     DEFAULT_UPDATE_PERIOD,
     DOMAIN,
 )
@@ -124,6 +126,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: DeviceConfigEntry) -> bo
         timeout=timeout,
         bluez_start_notify=advanced.get(CONF_BLUEZ_START_NOTIFY, False),
         watchdog_enabled=advanced.get(CONF_WATCHDOG_ENABLED, True),
+        max_reconnect_attempts=advanced.get(
+            CONF_MAX_RECONNECT_ATTEMPTS, DEFAULT_MAX_RECONNECT_ATTEMPTS
+        ),
     )
     issue_id = f"{entry.entry_id}_max_connection_attempts"
 
@@ -339,6 +344,9 @@ async def _update_listener(hass: HomeAssistant, entry: DeviceConfigEntry):
         timeout=advanced.get(CONF_CONNECTION_TIMEOUT, DEFAULT_CONNECTION_TIMEOUT),
         bluez_start_notify=advanced.get(CONF_BLUEZ_START_NOTIFY, False),
         watchdog_enabled=advanced.get(CONF_WATCHDOG_ENABLED, True),
+        max_reconnect_attempts=advanced.get(
+            CONF_MAX_RECONNECT_ATTEMPTS, DEFAULT_MAX_RECONNECT_ATTEMPTS
+        ),
     )
 
     (

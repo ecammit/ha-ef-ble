@@ -237,6 +237,7 @@ class Connection:
         timeout: int = 20
         bluez_start_notify: bool = False
         watchdog_enabled: bool = True
+        max_reconnect_attempts: int = MAX_RECONNECT_ATTEMPTS
 
     _listeners = _ConnectionListeners.create()
 
@@ -490,16 +491,17 @@ class Connection:
         self._reconnect_task.add_done_callback(_reconnect_done)
 
     async def reconnect(self) -> None:
+        max_reconnect_attempts = self._options.max_reconnect_attempts
         self._reconnect_attempt += 1
         self._retry_on_disconnect_delay = _next_reconnect_delay(self._reconnect_attempt)
-        if self._reconnect_attempt > MAX_RECONNECT_ATTEMPTS:
+        if self._reconnect_attempt > max_reconnect_attempts:
             self._logger.error(
-                "Could not reconnect after %d attempts", MAX_RECONNECT_ATTEMPTS
+                "Could not reconnect after %d attempts", max_reconnect_attempts
             )
             self._set_state(
                 ConnectionState.ERROR_MAX_RECONNECT_ATTEMPTS_REACHED,
                 MaxReconnectAttemptsReached(
-                    attempts=MAX_RECONNECT_ATTEMPTS,
+                    attempts=max_reconnect_attempts,
                     last_error=self._last_exception,
                 ),
             )
@@ -512,7 +514,7 @@ class Connection:
             "Reconnecting to the device in %d seconds, attempt: %d/%d...",
             self._retry_on_disconnect_delay,
             self._reconnect_attempt,
-            MAX_RECONNECT_ATTEMPTS,
+            max_reconnect_attempts,
         )
         await asyncio.sleep(self._retry_on_disconnect_delay)
         if not self._retry_on_disconnect:

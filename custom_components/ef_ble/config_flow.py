@@ -52,11 +52,13 @@ from .const import (
     CONF_LOG_MESSAGES,
     CONF_LOG_PACKETS,
     CONF_LOG_PAYLOADS,
+    CONF_MAX_RECONNECT_ATTEMPTS,
     CONF_PACKET_VERSION,
     CONF_UPDATE_PERIOD,
     CONF_USER_ID,
     CONF_WATCHDOG_ENABLED,
     DEFAULT_CONNECTION_TIMEOUT,
+    DEFAULT_MAX_RECONNECT_ATTEMPTS,
     DEFAULT_UPDATE_PERIOD,
     DOMAIN,
     LINK_WIKI_SUPPORTING_NEW_DEVICES,
@@ -929,6 +931,14 @@ class _SchemaBuilder:
                             CONF_WATCHDOG_ENABLED,
                             bool,
                             advanced.get(CONF_WATCHDOG_ENABLED, True),
+                        )
+                        .optional(
+                            CONF_MAX_RECONNECT_ATTEMPTS,
+                            vol.All(int, vol.Range(min=0)),
+                            advanced.get(
+                                CONF_MAX_RECONNECT_ATTEMPTS,
+                                DEFAULT_MAX_RECONNECT_ATTEMPTS,
+                            ),
                         )
                         .build()
                     ),
