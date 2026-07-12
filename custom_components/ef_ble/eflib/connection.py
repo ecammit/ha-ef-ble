@@ -231,6 +231,7 @@ class Connection:
         self._address = ble_dev.address
         self._dev_sn = dev_sn
         self._user_id = user_id
+        self._ble_device_resolver: Callable[[], BLEDevice | None] | None = None
 
         self._data_parse = data_parse
         self._packet_parse = packet_parse
@@ -318,7 +319,15 @@ class Connection:
         self._listeners.on_disconnect(exception)
 
     def ble_dev(self) -> BLEDevice:
+        if self._ble_device_resolver is not None:
+            if (resolved := self._ble_device_resolver()) is not None:
+                self._ble_dev = resolved
         return self._ble_dev
+
+    def with_ble_device_resolver(self, resolver: Callable[[], BLEDevice | None] | None):
+        """Set a callback to refresh the BLEDevice before each connect attempt."""
+        self._ble_device_resolver = resolver
+        return self
 
     def with_logging_options(self, options: LogOptions):
         self._logger.set_options(options)
