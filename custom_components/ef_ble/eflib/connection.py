@@ -73,6 +73,12 @@ def _next_reconnect_delay(attempt: int) -> float:
 # long enough for HA to mark the entry `FAILED_UNLOAD`, so cap every disconnect.
 DISCONNECT_TIMEOUT = 5.0
 
+# A proxy (or the OS Bluetooth stack) can report the link as connected while the
+# peripheral has actually gone silent without telling us. Force a reconnect if no
+# notification has arrived in a while rather than waiting on it indefinitely.
+WATCHDOG_CHECK_INTERVAL = 15.0
+WATCHDOG_TIMEOUT = 45.0
+
 
 _BT_PROTOCOL_UUIDS = {
     "rfcomm": {
@@ -231,6 +237,7 @@ class Connection:
 
         timeout: int = 20
         bluez_start_notify: bool = False
+        watchdog_enabled: bool = True
         max_reconnect_attempts: int = MAX_RECONNECT_ATTEMPTS
 
     _listeners = _ConnectionListeners.create()
@@ -273,6 +280,7 @@ class Connection:
 
         self._tasks: set[asyncio.Task] = set()
         self._call_later_handles: dict[str, asyncio.TimerHandle] = {}
+        self._last_activity: float = 0.0
 
         self._logger = ConnectionLogger(self)
         self._state_changed = asyncio.Event()
@@ -287,6 +295,8 @@ class Connection:
         self._connection_state: ConnectionState = None  # pyright: ignore[reportAttributeAccessIssue]
         self._state_reason: str | None = None
         self._set_state(ConnectionState.CREATED)
+
+        self.add_timer_task(self._watchdog_check, WATCHDOG_CHECK_INTERVAL)
 
     @property
     def is_connected(self) -> bool:
@@ -518,6 +528,15 @@ class Connection:
 
         self._set_state(ConnectionState.RECONNECTING)
         await self.connect()
+
+    async def _watchdog_check(self) -> None:
+        if not self._options.watchdog_enabled:
+            return
+        if time.monotonic() - self._last_activity > WATCHDOG_TIMEOUT:
+            self._logger.warning(
+                "No data received in over %ds, forcing reconnect", WATCHDOG_TIMEOUT
+            )
+            await self._disconnect_client()
 
     async def _disconnect_client(self) -> None:
         if self._client is None or not self._client.is_connected:
@@ -1151,6 +1170,7 @@ class Connection:
     async def listenForDataHandler(
         self, characteristic: BleakGATTCharacteristic, recv_data: bytearray
     ):
+        self._last_activity = time.monotonic()
         try:
             packets = await self.parseEncPackets(bytes(recv_data))
         except Exception as e:  # noqa: BLE001

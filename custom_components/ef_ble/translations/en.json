@@ -70,12 +70,14 @@
             "data": {
               "connection_timeout": "Connection timeout",
               "max_reconnect_attempts": "Max reconnect attempts",
-              "bluez_start_notify": "Use BlueZ start notify"
+              "bluez_start_notify": "Use BlueZ start notify",
+              "watchdog_enabled": "Enable connection watchdog"
             },
             "data_description": {
               "connection_timeout": "Number of seconds to wait for the device to connect and authenticate.",
               "max_reconnect_attempts": "Number of times to retry reconnecting after an unexpected disconnect before giving up.",
-              "bluez_start_notify": "Try enabling this if you experience frequent disconnects when multiple BLE devices are connected, or if you see `AcquireNotify: Read error` / `Unexpected EOF on notification file handle` in your logs."
+              "bluez_start_notify": "Try enabling this if you experience frequent disconnects when multiple BLE devices are connected, or if you see `AcquireNotify: Read error` / `Unexpected EOF on notification file handle` in your logs.",
+              "watchdog_enabled": "Force a reconnect if no data arrives from the device for a while, even though the connection still looks active."
             }
           }
         }
@@ -129,12 +131,14 @@
             "data": {
               "connection_timeout": "Connection timeout",
               "max_reconnect_attempts": "Max reconnect attempts",
-              "bluez_start_notify": "Use BlueZ start notify"
+              "bluez_start_notify": "Use BlueZ start notify",
+              "watchdog_enabled": "Enable connection watchdog"
             },
             "data_description": {
               "connection_timeout": "Number of seconds to wait for the device to connect and authenticate.",
               "max_reconnect_attempts": "Number of times to retry reconnecting after an unexpected disconnect before giving up.",
-              "bluez_start_notify": "Try enabling this if you experience frequent disconnects when multiple BLE devices are connected, or if you see `AcquireNotify: Read error` / `Unexpected EOF on notification file handle` in your logs."
+              "bluez_start_notify": "Try enabling this if you experience frequent disconnects when multiple BLE devices are connected, or if you see `AcquireNotify: Read error` / `Unexpected EOF on notification file handle` in your logs.",
+              "watchdog_enabled": "Force a reconnect if no data arrives from the device for a while, even though the connection still looks active."
             }
           }
         }
@@ -183,12 +187,14 @@
             "data": {
               "connection_timeout": "Connection timeout",
               "max_reconnect_attempts": "Max reconnect attempts",
-              "bluez_start_notify": "Use BlueZ start notify"
+              "bluez_start_notify": "Use BlueZ start notify",
+              "watchdog_enabled": "Enable connection watchdog"
             },
             "data_description": {
               "connection_timeout": "Number of seconds to wait for the device to connect and authenticate.",
               "max_reconnect_attempts": "Number of times to retry reconnecting after an unexpected disconnect before giving up.",
-              "bluez_start_notify": "Try enabling this if you experience frequent disconnects when multiple BLE devices are connected, or if you see `AcquireNotify: Read error` / `Unexpected EOF on notification file handle` in your logs."
+              "bluez_start_notify": "Try enabling this if you experience frequent disconnects when multiple BLE devices are connected, or if you see `AcquireNotify: Read error` / `Unexpected EOF on notification file handle` in your logs.",
+              "watchdog_enabled": "Force a reconnect if no data arrives from the device for a while, even though the connection still looks active."
             }
           }
         }
@@ -255,12 +261,14 @@
             "data": {
               "connection_timeout": "Connection timeout",
               "max_reconnect_attempts": "Max reconnect attempts",
-              "bluez_start_notify": "Use BlueZ start notify"
+              "bluez_start_notify": "Use BlueZ start notify",
+              "watchdog_enabled": "Enable connection watchdog"
             },
             "data_description": {
               "connection_timeout": "Number of seconds to wait for the device to connect and authenticate.",
               "max_reconnect_attempts": "Number of times to retry reconnecting after an unexpected disconnect before giving up.",
-              "bluez_start_notify": "Try enabling this if you experience frequent disconnects when multiple BLE devices are connected, or if you see `AcquireNotify: Read error` / `Unexpected EOF on notification file handle` in your logs."
+              "bluez_start_notify": "Try enabling this if you experience frequent disconnects when multiple BLE devices are connected, or if you see `AcquireNotify: Read error` / `Unexpected EOF on notification file handle` in your logs.",
+              "watchdog_enabled": "Force a reconnect if no data arrives from the device for a while, even though the connection still looks active."
             }
           }
         }

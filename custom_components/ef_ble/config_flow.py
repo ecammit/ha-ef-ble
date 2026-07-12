@@ -56,6 +56,7 @@ from .const import (
     CONF_PACKET_VERSION,
     CONF_UPDATE_PERIOD,
     CONF_USER_ID,
+    CONF_WATCHDOG_ENABLED,
     DEFAULT_CONNECTION_TIMEOUT,
     DEFAULT_MAX_RECONNECT_ATTEMPTS,
     DEFAULT_UPDATE_PERIOD,
@@ -933,6 +934,11 @@ class _SchemaBuilder:
                             CONF_BLUEZ_START_NOTIFY,
                             bool,
                             advanced.get(CONF_BLUEZ_START_NOTIFY, False),
+                        )
+                        .optional(
+                            CONF_WATCHDOG_ENABLED,
+                            bool,
+                            advanced.get(CONF_WATCHDOG_ENABLED, True),
                         )
                         .build()
                     ),

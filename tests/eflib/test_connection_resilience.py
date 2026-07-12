@@ -1,3 +1,5 @@
+import time
+
 import pytest
 from bleak_retry_connector import BleakOutOfConnectionSlotsError
 from pytest_mock import MockerFixture
@@ -6,6 +8,7 @@ from custom_components.ef_ble.eflib.connection import (
     MAX_RECONNECT_ATTEMPTS,
     RECONNECT_BASE_DELAY,
     RECONNECT_MAX_DELAY,
+    WATCHDOG_TIMEOUT,
     Connection,
     ConnectionState,
     _next_reconnect_delay,
@@ -31,7 +34,7 @@ def test_next_reconnect_delay_jitter_stays_within_bounds():
 
 
 @pytest.fixture
-def connection(mocker: MockerFixture):
+async def connection(mocker: MockerFixture):
     ble_dev = mocker.Mock()
     ble_dev.address = "AA:BB:CC:DD:EE:FF"
     conn = Connection(
@@ -77,8 +80,45 @@ async def test_connect_records_out_of_slots_error(connection, mocker: MockerFixt
     assert connection._last_state == ConnectionState.ERROR_OUT_OF_SLOTS
 
 
-def test_options_default_max_reconnect_attempts():
-    assert Connection.Options().max_reconnect_attempts == MAX_RECONNECT_ATTEMPTS
+async def test_watchdog_forces_disconnect_after_timeout(
+    connection, mocker: MockerFixture
+):
+    disconnect_client = mocker.patch.object(connection, "_disconnect_client")
+    connection._last_activity = time.monotonic() - (WATCHDOG_TIMEOUT + 1)
+
+    await connection._watchdog_check()
+
+    disconnect_client.assert_awaited_once()
+
+
+async def test_watchdog_does_not_disconnect_when_recently_active(
+    connection, mocker: MockerFixture
+):
+    disconnect_client = mocker.patch.object(connection, "_disconnect_client")
+    connection._last_activity = time.monotonic()
+
+    await connection._watchdog_check()
+
+    disconnect_client.assert_not_awaited()
+
+
+def test_options_default_watchdog_enabled_and_max_reconnect_attempts():
+    options = Connection.Options()
+
+    assert options.watchdog_enabled is True
+    assert options.max_reconnect_attempts == MAX_RECONNECT_ATTEMPTS
+
+
+async def test_watchdog_disabled_via_options_does_not_disconnect(
+    connection, mocker: MockerFixture
+):
+    disconnect_client = mocker.patch.object(connection, "_disconnect_client")
+    connection._options.watchdog_enabled = False
+    connection._last_activity = time.monotonic() - (WATCHDOG_TIMEOUT + 1)
+
+    await connection._watchdog_check()
+
+    disconnect_client.assert_not_awaited()
 
 
 async def test_reconnect_honors_max_reconnect_attempts_option(connection):
