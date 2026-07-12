@@ -2,7 +2,32 @@ import pytest
 from bleak_retry_connector import BleakOutOfConnectionSlotsError
 from pytest_mock import MockerFixture
 
-from custom_components.ef_ble.eflib.connection import Connection, ConnectionState
+from custom_components.ef_ble.eflib.connection import (
+    MAX_RECONNECT_ATTEMPTS,
+    RECONNECT_BASE_DELAY,
+    RECONNECT_MAX_DELAY,
+    Connection,
+    ConnectionState,
+    _next_reconnect_delay,
+)
+
+
+@pytest.mark.parametrize(
+    ("attempt", "expected_base"),
+    [(1, 10.0), (2, 20.0), (3, 40.0), (4, 60.0), (5, 60.0)],
+)
+def test_next_reconnect_delay_grows_and_caps(
+    mocker: MockerFixture, attempt, expected_base
+):
+    mocker.patch("random.uniform", return_value=0.0)
+    assert _next_reconnect_delay(attempt) == expected_base
+
+
+def test_next_reconnect_delay_jitter_stays_within_bounds():
+    for attempt in range(1, 6):
+        base = min(RECONNECT_BASE_DELAY * (2 ** (attempt - 1)), RECONNECT_MAX_DELAY)
+        delay = _next_reconnect_delay(attempt)
+        assert base <= delay <= base * 1.2
 
 
 @pytest.fixture
@@ -50,3 +75,19 @@ async def test_connect_records_out_of_slots_error(connection, mocker: MockerFixt
     await connection.connect(max_attempts=1)
 
     assert connection._last_state == ConnectionState.ERROR_OUT_OF_SLOTS
+
+
+def test_options_default_max_reconnect_attempts():
+    assert Connection.Options().max_reconnect_attempts == MAX_RECONNECT_ATTEMPTS
+
+
+async def test_reconnect_honors_max_reconnect_attempts_option(connection):
+    connection._options.max_reconnect_attempts = 1
+    connection._reconnect_attempt = 1
+
+    await connection.reconnect()
+
+    assert (
+        connection._connection_state
+        == ConnectionState.ERROR_MAX_RECONNECT_ATTEMPTS_REACHED
+    )

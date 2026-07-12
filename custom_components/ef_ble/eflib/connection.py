@@ -3,6 +3,7 @@ import contextlib
 import functools
 import hashlib
 import logging
+import random
 import struct
 import time
 import traceback
@@ -49,8 +50,22 @@ from .logging_util import ConnectionLogger, LogOptions, caller_chain
 from .packet import Packet
 from .props.utils import classproperty
 
-MAX_RECONNECT_ATTEMPTS = 2
+MAX_RECONNECT_ATTEMPTS = 5
 MAX_CONNECTION_ATTEMPTS = 10
+
+# Backoff for the in-session reconnect loop (Connection.reconnect()), separate from
+# MAX_CONNECTION_ATTEMPTS above which bounds establish_connection()'s own retries
+# during the initial connect. Capped exponential growth with jitter so a shared
+# ESPHome proxy isn't hammered by synchronized retries after e.g. a brief outage.
+RECONNECT_BASE_DELAY = 10.0
+RECONNECT_MAX_DELAY = 60.0
+RECONNECT_JITTER_FRACTION = 0.2
+
+
+def _next_reconnect_delay(attempt: int) -> float:
+    base = min(RECONNECT_BASE_DELAY * (2 ** max(attempt - 1, 0)), RECONNECT_MAX_DELAY)
+    return base + random.uniform(0, base * RECONNECT_JITTER_FRACTION)
+
 
 # `BleakClient.disconnect()` can block until the connect timeout (default 20s) when a
 # write-with-response is still pending on the transport after a mid-auth BLE drop
@@ -216,6 +231,7 @@ class Connection:
 
         timeout: int = 20
         bluez_start_notify: bool = False
+        max_reconnect_attempts: int = MAX_RECONNECT_ATTEMPTS
 
     _listeners = _ConnectionListeners.create()
 
@@ -470,19 +486,17 @@ class Connection:
         self._reconnect_task.add_done_callback(_reconnect_done)
 
     async def reconnect(self) -> None:
-        # Wait before reconnect
-        if self._reconnect_attempt == 0:
-            self._retry_on_disconnect_delay = 10
-
+        max_reconnect_attempts = self._options.max_reconnect_attempts
         self._reconnect_attempt += 1
-        if self._reconnect_attempt > MAX_RECONNECT_ATTEMPTS:
+        self._retry_on_disconnect_delay = _next_reconnect_delay(self._reconnect_attempt)
+        if self._reconnect_attempt > max_reconnect_attempts:
             self._logger.error(
-                "Could not reconnect after %d attempts", MAX_RECONNECT_ATTEMPTS
+                "Could not reconnect after %d attempts", max_reconnect_attempts
             )
             self._set_state(
                 ConnectionState.ERROR_MAX_RECONNECT_ATTEMPTS_REACHED,
                 MaxReconnectAttemptsReached(
-                    attempts=MAX_RECONNECT_ATTEMPTS,
+                    attempts=max_reconnect_attempts,
                     last_error=self._last_exception,
                 ),
             )
@@ -495,14 +509,13 @@ class Connection:
             "Reconnecting to the device in %d seconds, attempt: %d/%d...",
             self._retry_on_disconnect_delay,
             self._reconnect_attempt,
-            MAX_RECONNECT_ATTEMPTS,
+            max_reconnect_attempts,
         )
         await asyncio.sleep(self._retry_on_disconnect_delay)
         if not self._retry_on_disconnect:
             self._logger.warning("Reconnect is aborted")
             return
 
-        self._retry_on_disconnect_delay += 10
         self._set_state(ConnectionState.RECONNECTING)
         await self.connect()
 
