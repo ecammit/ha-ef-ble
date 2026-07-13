@@ -99,6 +99,23 @@ async def test_connect_records_out_of_slots_error(connection, mocker: MockerFixt
     assert connection._last_state == ConnectionState.ERROR_OUT_OF_SLOTS
 
 
+async def test_connect_resets_last_activity_once_connected(
+    connection, mocker: MockerFixture
+):
+    mock_client = mocker.AsyncMock()
+    mock_client.is_connected = True
+    mocker.patch(
+        "custom_components.ef_ble.eflib.connection.establish_connection",
+        return_value=mock_client,
+    )
+    mocker.patch.object(connection, "initBleSessionKey", mocker.AsyncMock())
+    connection._last_activity = 0.0
+
+    await connection.connect(max_attempts=1)
+
+    assert time.monotonic() - connection._last_activity < 1.0
+
+
 async def test_watchdog_forces_disconnect_after_timeout(
     connection, mocker: MockerFixture
 ):

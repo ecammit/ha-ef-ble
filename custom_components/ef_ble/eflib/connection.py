@@ -456,6 +456,10 @@ class Connection:
         self._logger.info("Connected")
         self._errors = 0
         self._retry_on_disconnect = self._reconnect
+        # Baseline for the watchdog: covers the whole auth handshake, and any future
+        # device whose auth completion doesn't route through listenForDataHandler
+        # (the only other place this gets bumped).
+        self._last_activity = time.monotonic()
 
         self._logger.info("Init completed, starting auth routine...")
 
