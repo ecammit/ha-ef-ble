@@ -37,3 +37,4 @@ DEFAULT_MAX_RECONNECT_ATTEMPTS = 5
 LINK_WIKI_SUPPORTING_NEW_DEVICES = (
     "https://github.com/rabits/ha-ef-ble/wiki/Requesting-Support-for-New-Devices"
 )
+LINK_ESPHOME_BLUETOOTH_PROXIES = "https://esphome.github.io/bluetooth-proxies/"

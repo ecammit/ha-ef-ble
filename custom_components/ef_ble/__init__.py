@@ -42,6 +42,7 @@ from .const import (
     DEFAULT_MAX_RECONNECT_ATTEMPTS,
     DEFAULT_UPDATE_PERIOD,
     DOMAIN,
+    LINK_ESPHOME_BLUETOOTH_PROXIES,
 )
 from .eflib.connection import (
     BleakError,
@@ -236,7 +237,10 @@ def _create_out_of_slots_issue(
         is_fixable=False,
         severity=ir.IssueSeverity.WARNING,
         translation_key="ble_out_of_connection_slots",
-        translation_placeholders={"device_name": device_name},
+        translation_placeholders={
+            "device_name": device_name,
+            "proxy_link": LINK_ESPHOME_BLUETOOTH_PROXIES,
+        },
     )
 
 

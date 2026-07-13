@@ -314,7 +314,7 @@
     },
     "ble_out_of_connection_slots": {
       "title": "No Bluetooth adapter/proxy could reach {device_name}",
-      "description": "No registered Bluetooth adapter or ESPHome proxy currently has a free connection slot that can reach {device_name}. This usually means either the adapter/proxy is out of connection slots, or the device is out of range/powered off and hasn't advertised recently - check the logs for \"last advertisement\" to tell which. If the device is on and nearby, try freeing a slot, adding another proxy (https://esphome.github.io/bluetooth-proxies/), or moving the device closer to a proxy or adapter."
+      "description": "No registered Bluetooth adapter or ESPHome proxy currently has a free connection slot that can reach {device_name}. This usually means either the adapter/proxy is out of connection slots, or the device is out of range/powered off and hasn't advertised recently - check the logs for \"last advertisement\" to tell which. If the device is on and nearby, try freeing a slot, adding [another proxy]({proxy_link}), or moving the device closer to a proxy or adapter."
     }
   },
   "entity": {
