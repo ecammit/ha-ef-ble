@@ -37,8 +37,10 @@ from .const import (
     CONF_UPDATE_PERIOD,
     CONF_USER_ID,
     CONF_WATCHDOG_ENABLED,
+    CONF_WATCHDOG_TIMEOUT,
     DEFAULT_CONNECTION_TIMEOUT,
     DEFAULT_UPDATE_PERIOD,
+    DEFAULT_WATCHDOG_TIMEOUT,
     DOMAIN,
     LINK_ESPHOME_BLUETOOTH_PROXIES,
 )
@@ -125,6 +127,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: DeviceConfigEntry) -> bo
         timeout=timeout,
         bluez_start_notify=advanced.get(CONF_BLUEZ_START_NOTIFY, False),
         watchdog_enabled=advanced.get(CONF_WATCHDOG_ENABLED, True),
+        watchdog_timeout=advanced.get(CONF_WATCHDOG_TIMEOUT, DEFAULT_WATCHDOG_TIMEOUT),
     )
     issue_id = f"{entry.entry_id}_max_connection_attempts"
     out_of_slots_issue_id = f"{entry.entry_id}_out_of_slots"
@@ -348,6 +351,7 @@ async def _update_listener(hass: HomeAssistant, entry: DeviceConfigEntry):
         timeout=advanced.get(CONF_CONNECTION_TIMEOUT, DEFAULT_CONNECTION_TIMEOUT),
         bluez_start_notify=advanced.get(CONF_BLUEZ_START_NOTIFY, False),
         watchdog_enabled=advanced.get(CONF_WATCHDOG_ENABLED, True),
+        watchdog_timeout=advanced.get(CONF_WATCHDOG_TIMEOUT, DEFAULT_WATCHDOG_TIMEOUT),
     )
 
     (

@@ -125,6 +125,7 @@ def test_options_default_watchdog_enabled_and_max_reconnect_attempts():
     options = Connection.Options()
 
     assert options.watchdog_enabled is True
+    assert options.watchdog_timeout == WATCHDOG_TIMEOUT
     assert options.max_reconnect_attempts == MAX_RECONNECT_ATTEMPTS
 
 
@@ -133,6 +134,28 @@ async def test_watchdog_disabled_via_options_does_not_disconnect(
 ):
     disconnect_client = mocker.patch.object(connection, "_disconnect_client")
     connection._options.watchdog_enabled = False
+    connection._last_activity = time.monotonic() - (WATCHDOG_TIMEOUT + 1)
+
+    await connection._watchdog_check()
+
+    disconnect_client.assert_not_awaited()
+
+
+async def test_watchdog_honors_custom_timeout_option(connection, mocker: MockerFixture):
+    disconnect_client = mocker.patch.object(connection, "_disconnect_client")
+    connection._options.watchdog_timeout = 5.0
+    connection._last_activity = time.monotonic() - 10
+
+    await connection._watchdog_check()
+
+    disconnect_client.assert_awaited_once()
+
+
+async def test_watchdog_does_not_disconnect_within_custom_timeout(
+    connection, mocker: MockerFixture
+):
+    disconnect_client = mocker.patch.object(connection, "_disconnect_client")
+    connection._options.watchdog_timeout = 120.0
     connection._last_activity = time.monotonic() - (WATCHDOG_TIMEOUT + 1)
 
     await connection._watchdog_check()

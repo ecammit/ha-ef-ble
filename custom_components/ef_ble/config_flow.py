@@ -56,8 +56,10 @@ from .const import (
     CONF_UPDATE_PERIOD,
     CONF_USER_ID,
     CONF_WATCHDOG_ENABLED,
+    CONF_WATCHDOG_TIMEOUT,
     DEFAULT_CONNECTION_TIMEOUT,
     DEFAULT_UPDATE_PERIOD,
+    DEFAULT_WATCHDOG_TIMEOUT,
     DOMAIN,
     LINK_WIKI_SUPPORTING_NEW_DEVICES,
 )
@@ -929,6 +931,13 @@ class _SchemaBuilder:
                             CONF_WATCHDOG_ENABLED,
                             bool,
                             advanced.get(CONF_WATCHDOG_ENABLED, True),
+                        )
+                        .optional(
+                            CONF_WATCHDOG_TIMEOUT,
+                            vol.All(int, vol.Range(min=0)),
+                            advanced.get(
+                                CONF_WATCHDOG_TIMEOUT, DEFAULT_WATCHDOG_TIMEOUT
+                            ),
                         )
                         .build()
                     ),

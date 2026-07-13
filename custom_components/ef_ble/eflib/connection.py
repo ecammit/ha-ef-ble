@@ -238,6 +238,7 @@ class Connection:
         timeout: int = 20
         bluez_start_notify: bool = False
         watchdog_enabled: bool = True
+        watchdog_timeout: float = WATCHDOG_TIMEOUT
         max_reconnect_attempts: int = MAX_RECONNECT_ATTEMPTS
 
     _listeners = _ConnectionListeners.create()
@@ -535,9 +536,10 @@ class Connection:
     async def _watchdog_check(self) -> None:
         if not self._options.watchdog_enabled:
             return
-        if time.monotonic() - self._last_activity > WATCHDOG_TIMEOUT:
+        watchdog_timeout = self._options.watchdog_timeout
+        if time.monotonic() - self._last_activity > watchdog_timeout:
             self._logger.warning(
-                "No data received in over %ds, forcing reconnect", WATCHDOG_TIMEOUT
+                "No data received in over %ds, forcing reconnect", watchdog_timeout
             )
             await self._disconnect_client()
 

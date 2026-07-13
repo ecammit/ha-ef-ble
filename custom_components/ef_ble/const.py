@@ -14,6 +14,7 @@ CONF_EXTRA_BATTERY = "extra_battery"
 CONF_ADVANCED_CONNECTION_OPTIONS = "advanced_connection_options"
 CONF_BLUEZ_START_NOTIFY = "bluez_start_notify"
 CONF_WATCHDOG_ENABLED = "watchdog_enabled"
+CONF_WATCHDOG_TIMEOUT = "watchdog_timeout"
 
 CONF_DIAGNOSTICS_OPTIONS = "diagnostics_options"
 CONF_DIAGNOSTICS_ENCRYPT = "diagnostics_encrypt"
@@ -30,6 +31,7 @@ CONF_LOG_BLEAK = "log_bleak"
 
 DEFAULT_UPDATE_PERIOD = 10
 DEFAULT_CONNECTION_TIMEOUT = 20
+DEFAULT_WATCHDOG_TIMEOUT = 45
 
 
 LINK_WIKI_SUPPORTING_NEW_DEVICES = (
