@@ -11,6 +11,7 @@ from custom_components.ef_ble.eflib.connection import (
     WATCHDOG_TIMEOUT,
     Connection,
     ConnectionState,
+    MaxConnectionAttemptsReached,
     _next_reconnect_delay,
 )
 
@@ -46,6 +47,24 @@ async def connection(mocker: MockerFixture):
     )
     yield conn
     conn._cancel_tasks()
+
+
+def test_construction_does_not_schedule_watchdog_task(connection):
+    assert len(connection._tasks) == 0
+
+
+async def test_connect_schedules_watchdog_task_once(connection, mocker: MockerFixture):
+    mocker.patch(
+        "custom_components.ef_ble.eflib.connection.establish_connection",
+        side_effect=BleakOutOfConnectionSlotsError("no free slots"),
+    )
+    connection.with_disabled_reconnect()
+
+    await connection.connect(max_attempts=1)
+    with pytest.raises(MaxConnectionAttemptsReached):
+        await connection.connect(max_attempts=1)
+
+    assert len(connection._tasks) == 1
 
 
 def test_ble_dev_without_resolver_returns_cached_device(connection):

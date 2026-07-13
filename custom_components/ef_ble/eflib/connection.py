@@ -281,6 +281,7 @@ class Connection:
         self._tasks: set[asyncio.Task] = set()
         self._call_later_handles: dict[str, asyncio.TimerHandle] = {}
         self._last_activity: float = 0.0
+        self._watchdog_scheduled = False
 
         self._logger = ConnectionLogger(self)
         self._state_changed = asyncio.Event()
@@ -295,8 +296,6 @@ class Connection:
         self._connection_state: ConnectionState = None  # pyright: ignore[reportAttributeAccessIssue]
         self._state_reason: str | None = None
         self._set_state(ConnectionState.CREATED)
-
-        self.add_timer_task(self._watchdog_check, WATCHDOG_CHECK_INTERVAL)
 
     @property
     def is_connected(self) -> bool:
@@ -378,6 +377,10 @@ class Connection:
         self,
         max_attempts: int | None = None,
     ):
+        if not self._watchdog_scheduled:
+            self._watchdog_scheduled = True
+            self.add_timer_task(self._watchdog_check, WATCHDOG_CHECK_INTERVAL)
+
         if self._state.is_connecting:
             return
 
