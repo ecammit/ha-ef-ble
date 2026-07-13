@@ -257,6 +257,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: DeviceConfigEntry) -> b
 async def async_remove_entry(hass: HomeAssistant, entry: DeviceConfigEntry):
     _cancel_reappear_callback(hass, entry)
     ConnectionLog.clean_cache_for(entry.data[CONF_ADDRESS])
+    ir.async_delete_issue(hass, DOMAIN, f"{entry.entry_id}_max_connection_attempts")
+    ir.async_delete_issue(hass, DOMAIN, f"{entry.entry_id}_out_of_slots")
 
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
