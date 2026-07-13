@@ -131,6 +131,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: DeviceConfigEntry) -> bo
         ),
     )
     issue_id = f"{entry.entry_id}_max_connection_attempts"
+    out_of_slots_issue_id = f"{entry.entry_id}_out_of_slots"
 
     def _resolve_ble_device():
         return bluetooth.async_ble_device_from_address(hass, address, connectable=True)
@@ -186,8 +187,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: DeviceConfigEntry) -> bo
         ) from e
     else:
         if not state.authenticated:
-            await _handle_unauthenticated_connection(hass, entry, device, state)
+            await _handle_unauthenticated_connection(
+                hass, entry, device, state, out_of_slots_issue_id
+            )
     ir.async_delete_issue(hass, DOMAIN, issue_id)
+    ir.async_delete_issue(hass, DOMAIN, out_of_slots_issue_id)
 
     _LOGGER.debug("Creating entities")
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -211,10 +215,11 @@ async def _handle_unauthenticated_connection(
     entry: DeviceConfigEntry,
     device: eflib.DeviceBase,
     state: ConnectionState,
+    out_of_slots_issue_id: str,
 ) -> None:
     await device.disconnect()
     if state is ConnectionState.ERROR_OUT_OF_SLOTS:
-        _create_out_of_slots_issue(hass, entry, device.name)
+        _create_out_of_slots_issue(hass, out_of_slots_issue_id, device.name)
     raise ConfigEntryNotReady(
         translation_key="failed_after_successful_connection",
         translation_placeholders={"last_state": state},
@@ -222,12 +227,12 @@ async def _handle_unauthenticated_connection(
 
 
 def _create_out_of_slots_issue(
-    hass: HomeAssistant, entry: DeviceConfigEntry, device_name: str
+    hass: HomeAssistant, issue_id: str, device_name: str
 ) -> None:
     ir.async_create_issue(
         hass,
         DOMAIN,
-        f"{entry.entry_id}_out_of_slots",
+        issue_id,
         is_fixable=False,
         severity=ir.IssueSeverity.WARNING,
         translation_key="ble_out_of_connection_slots",
