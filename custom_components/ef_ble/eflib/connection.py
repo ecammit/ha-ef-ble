@@ -1003,6 +1003,21 @@ class Connection:
             return packets
 
     async def _listen_for_data_handler(self, data: bytes):
+        if not self._connection_state.received_session_key:
+            # Ordinary device data can't exist yet - there's no session key to decrypt
+            # it with. Parsing it anyway is how a stray notification (arriving before
+            # the buffer opens, or a leftover from a stale subscription) turns into
+            # garbage: either an assertion failure (no encryption at all yet) or a
+            # silent bad decode with whatever encryption is left over from the previous
+            # session. Drop it - the auth stage that's actually waiting for a reply
+            # reads it via the notification buffer, not this fallback path.
+            self._logger.log_filtered(
+                LogOptions.CONNECTION_DEBUG,
+                "Dropping notification received before the session key is ready: %r",
+                data,
+            )
+            return
+
         try:
             packets = await self._parse_enc_packets(data)
         except Exception as e:  # noqa: BLE001
