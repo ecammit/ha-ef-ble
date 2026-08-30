@@ -262,10 +262,237 @@ async def test_set_drain_mode_is_a_noop_outside_cool_mode(device, packet_name, m
 
 
 def test_power_mode_select_hides_internal_init_state(device):
-    select = next(
+    """
+    INIT is folded into the dynamic exclude (with OFF) rather than the static list,
+    so options_str carries the full enum and INIT is only actually hidden once the
+    dynamic exclusion is applied at the entity layer - checked here at the source.
+    """
+    assert PowerMode.INIT in device._power_mode_excluded_options
+
+
+def _drain_switch(device: Device):
+    return next(
+        c
+        for c in device.get_controls(control_type=controls.switch)
+        if c.key == "automatic_drain"
+    )
+
+
+def _drain_select(device: Device):
+    return next(
+        c
+        for c in device.get_controls(control_type=controls.select)
+        if c.key == "drain_mode"
+    )
+
+
+def _power_mode_select(device: Device):
+    return next(
         c
         for c in device.get_controls(control_type=controls.select)
         if c.key == "power_mode"
     )
 
-    assert select.options_str == ["on", "standby", "off"]
+
+async def test_automatic_drain_switch_is_gated_on_power(device):
+    """Toggling the switch while the unit is off/standby was silently reverting."""
+    assert _drain_switch(device).availability is Device.power
+
+    await _process(device, PACKETS["heat_fahrenheit_standby"])
+    assert device.power is False
+
+    await _process(device, PACKETS["heat_drain_on"])
+    assert device.power is True
+
+
+async def test_drain_mode_select_is_gated_on_power_not_main_mode(device):
+    """
+    Unlike the old whole-select availability, Drain Mode stays available in every
+    main mode once the unit is on - only the unsupported *option* is excluded (see
+    below) - so it must not also be tied to `main_mode`.
+    """
+    assert _drain_select(device).availability is Device.power
+
+
+@pytest.mark.parametrize(
+    ("packet_name", "expect_drain_free_excluded"),
+    [
+        ("heat_drain_on", True),
+        ("fan_fahrenheit_target_60", True),
+        ("fan_celsius_target_30", True),
+    ],
+)
+async def test_drain_mode_excludes_drain_free_outside_cool_mode(
+    device, packet_name, expect_drain_free_excluded
+):
+    await _process(device, PACKETS[packet_name])
+
+    excluded = device._drain_mode_excluded_options
+    assert (DrainMode.DRAIN_FREE in excluded) is expect_drain_free_excluded
+
+
+def test_drain_mode_does_not_exclude_drain_free_in_cool_mode(device):
+    _force_cool_mode(device, wte_fth_en=0)
+
+    assert DrainMode.DRAIN_FREE not in device._drain_mode_excluded_options
+
+
+@pytest.mark.parametrize(
+    "power_src",
+    [
+        0b00000,  # no source flags at all - not battery-only either
+        0b00001,  # AC mains only
+        0b10001,  # AC mains + battery also active
+        0b00010,  # solar only
+        0b00100,  # unverified bit 2 only (possibly a Delta 2/3 over XT150)
+        0b10010,  # battery + solar also active
+        0b10100,  # battery + unverified bit 2 also active
+    ],
+)
+async def test_power_mode_off_is_excluded_unless_solely_on_battery(
+    device, mocker, power_src
+):
+    """
+    Mirrors the app's own DeviceStandbyOrOffPopupWindow gating: Off is only offered
+    without hesitation when running solely on battery - every other combination
+    (AC mains, solar, the still-unconfirmed bit 2 source, or no source at all)
+    excludes it.
+    """
+    mocker.patch.object(
+        Device, "power_src", mocker.PropertyMock(return_value=power_src)
+    )
+
+    assert PowerMode.OFF in device._power_mode_excluded_options
+
+
+@pytest.mark.parametrize(
+    "power_src",
+    [
+        None,
+        0b10000,  # battery only, no other source active
+    ],
+)
+async def test_power_mode_off_is_not_excluded_when_solely_on_battery(
+    device, mocker, power_src
+):
+    mocker.patch.object(
+        Device, "power_src", mocker.PropertyMock(return_value=power_src)
+    )
+
+    assert device._power_mode_excluded_options == [PowerMode.INIT]
+
+
+def test_power_mode_select_exclude_field_is_wired(device):
+    assert _power_mode_select(device).exclude is Device._power_mode_excluded_options
+
+
+def _ambient_light_switch(device: Device):
+    return next(
+        c
+        for c in device.get_controls(control_type=controls.switch)
+        if c.key == "ambient_light"
+    )
+
+
+def _fan_speed_select(device: Device):
+    return next(
+        c
+        for c in device.get_controls(control_type=controls.select)
+        if c.key == "fan_speed"
+    )
+
+
+def _main_mode_select(device: Device):
+    return next(
+        c
+        for c in device.get_controls(control_type=controls.select)
+        if c.key == "main_mode"
+    )
+
+
+def _sub_mode_select(device: Device):
+    return next(
+        c
+        for c in device.get_controls(control_type=controls.select)
+        if c.key == "sub_mode"
+    )
+
+
+def _target_temperature_number(device: Device):
+    return next(
+        c
+        for c in device.get_controls(control_type=controls.temperature)
+        if c.key == "target_temperature"
+    )
+
+
+@pytest.mark.parametrize(
+    "get_control",
+    [
+        _ambient_light_switch,
+        _fan_speed_select,
+        _main_mode_select,
+        _sub_mode_select,
+        _target_temperature_number,
+    ],
+)
+def test_controls_go_unavailable_in_standby(device, get_control):
+    """
+    Ambient Light, Fan Speed, Main Mode, Sub Mode and Target Temperature were
+    changeable even with the unit off/standby, where the device ignores the change -
+    they must now report unavailable instead, matching the drain controls above.
+    """
+    assert get_control(device).availability is Device.power
+
+
+async def test_plugged_in_ac_follows_power_src_mains_bit(device, mocker):
+    """
+    Bit assignments confirmed against real hardware: AC only reads as 1 (bit 0),
+    battery only reads as 16 (bit 4), AC + battery reads as 17.
+    """
+    mocker.patch.object(Device, "power_src", mocker.PropertyMock(return_value=0b00001))
+    assert device.plugged_in_ac is True
+
+    mocker.patch.object(Device, "power_src", mocker.PropertyMock(return_value=0b10000))
+    assert device.plugged_in_ac is False
+
+
+def test_plugged_in_ac_is_unknown_before_first_heartbeat(device):
+    assert device.plugged_in_ac is None
+
+
+async def test_battery_connected_follows_power_src_battery_bit(device, mocker):
+    mocker.patch.object(Device, "power_src", mocker.PropertyMock(return_value=0b10000))
+    assert device.battery_connected is True
+
+    mocker.patch.object(Device, "power_src", mocker.PropertyMock(return_value=0b00001))
+    assert device.battery_connected is False
+
+
+@pytest.mark.parametrize(
+    ("power_src", "expected_ac", "expected_battery", "expected_solar"),
+    [
+        (1, True, False, False),  # AC connected, battery disconnected
+        (17, True, True, False),  # AC and battery connected
+        (16, False, True, False),  # AC disconnected, battery connected
+        (18, False, True, True),  # AC disconnected, battery + solar connected
+    ],
+)
+async def test_power_source_flags_match_real_hardware_readings(
+    device, mocker, power_src, expected_ac, expected_battery, expected_solar
+):
+    mocker.patch.object(
+        Device, "power_src", mocker.PropertyMock(return_value=power_src)
+    )
+
+    assert device.plugged_in_ac is expected_ac
+    assert device.battery_connected is expected_battery
+    assert device.solar_connected is expected_solar
+
+
+def test_battery_connected_is_unknown_before_first_heartbeat(device):
+    assert device.battery_connected is None
+
+
+def test_solar_connected_is_unknown_before_first_heartbeat(device):
+    assert device.solar_connected is None

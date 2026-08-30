@@ -176,19 +176,25 @@ class select[E: IntFieldValue](ControlType):
     type SetFunc = Callable[[DeviceBase, E], Awaitable[None]]
 
     options: type[E] | list[str]
-    exclude: list[E] = dataclasses.field(default_factory=list, kw_only=True)
+    # A plain list is fixed once at class-definition time. A `Field` or
+    # `dynamic(...)` is instead resolved per device instance - for options that are
+    # only sometimes invalid depending on live device state, not always.
+    exclude: "list[E] | Field | DynamicValue" = dataclasses.field(
+        default_factory=list, kw_only=True
+    )
     set_value_func: SetFunc = dataclasses.field(
         repr=False,
         init=False,
     )
 
     def __post_init__(self) -> None:
+        static_exclude = self.exclude if isinstance(self.exclude, list) else []
         if isinstance(self.options, list):
             self._value_type: type[E] | None = None
         else:
             self._value_type = self.options
             self.options = self.options.options(
-                include_unknown=False, exclude=self.exclude
+                include_unknown=False, exclude=static_exclude
             )
 
     @property

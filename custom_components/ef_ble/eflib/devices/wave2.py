@@ -123,12 +123,74 @@ class Device(DeviceBase, RawDataProps):
             return DrainMode.EXTERNAL
         return DrainMode.from_wte(self.wte_fth_en)
 
-    # power_src looks like a bitmask, observations:
-    # bit 0 - battery
-    # bits 1-2 - optional internal power sources?
+    @computed_field
+    def _drain_mode_excluded_options(self) -> list[DrainMode]:
+        if self.main_mode in (MainMode.WARM, MainMode.FAN):
+            return [DrainMode.DRAIN_FREE]
+        return []
+
+    # power_src is a bitmask, confirmed against real hardware readings (AC only = 1,
+    # AC + battery = 17, battery only = 16, battery + solar = 18):
+    # bit 0 - AC mains
+    # bit 1 - solar
+    # bit 2 - possibly a Delta 2/3 power station connected over XT150? (unverified)
     # Bits 3, 5–7 - unused
-    # bit 4 - AC mains
-    # power_src = raw_field(pb.power_src)
+    # bit 4 - battery
+    power_src = raw_field(pb.power_src)
+
+    _POWER_SRC_AC_MAINS = 0b00001
+    _POWER_SRC_SOLAR = 0b00010
+    _POWER_SRC_UNKNOWN_BIT_2 = 0b00100
+    _POWER_SRC_BATTERY = 0b10000
+
+    @computed_field
+    def battery_connected(self) -> bool | None:
+        if self.power_src is None:
+            return None
+        return bool(self.power_src & self._POWER_SRC_BATTERY)
+
+    @computed_field
+    def plugged_in_ac(self) -> bool | None:
+        if self.power_src is None:
+            return None
+        return bool(self.power_src & self._POWER_SRC_AC_MAINS)
+
+    @computed_field
+    def solar_connected(self) -> bool | None:
+        if self.power_src is None:
+            return None
+        return bool(self.power_src & self._POWER_SRC_SOLAR)
+
+    @computed_field
+    def _power_mode_excluded_options(self) -> list[PowerMode]:
+        # INIT is an internal-only state, never a real choice, so it's always
+        # excluded regardless of device state.
+        excluded: list[PowerMode] = [PowerMode.INIT]
+
+        # The app's own gating (KT210DetailActivity's power-off handler) only
+        # cautions the user - a "Standby or Off?" confirmation defaulting to
+        # Standby - when running solely on battery; AC mains, solar, or the
+        # still-unconfirmed bit 2 source (possibly a Delta 2/3 power station
+        # connected over XT150) being active skips that confirmation and sends Off
+        # outright. Real hardware confirms the AC-mains case specifically goes
+        # further at the firmware level and silently demotes Off to Standby
+        # regardless of what's sent - extending that same battery-only condition to
+        # gate the option entirely, on the assumption the other "skip the
+        # confirmation" cases behave the same way at the firmware level (unconfirmed
+        # for solar, bit 2, and AC/solar combined with battery).
+        if self.power_src is None:
+            return excluded
+        other_sources = (
+            self._POWER_SRC_AC_MAINS
+            | self._POWER_SRC_SOLAR
+            | self._POWER_SRC_UNKNOWN_BIT_2
+        )
+        solely_on_battery = not (self.power_src & other_sources) and bool(
+            self.power_src & self._POWER_SRC_BATTERY
+        )
+        if not solely_on_battery:
+            excluded.append(PowerMode.OFF)
+        return excluded
 
     @classmethod
     def check(cls, sn):
@@ -184,11 +246,11 @@ class Device(DeviceBase, RawDataProps):
     async def enable_power(self, enabled: bool):
         await self.set_power_mode(PowerMode.ON if enabled else PowerMode.STANDBY)
 
-    @controls.switch(ambient_light)
+    @controls.switch(ambient_light, availability=power)
     async def enable_ambient_light(self, enabled: bool):
         await self._send_config_packet(0x5C, (0x01 if enabled else 0x02).to_bytes())
 
-    @controls.switch(automatic_drain)
+    @controls.switch(automatic_drain, availability=power)
     async def enable_automatic_drain(self, enabled: bool):
         preference = (self.wte_fth_en or 0) & 1
         if not enabled:
@@ -201,7 +263,12 @@ class Device(DeviceBase, RawDataProps):
             payload = preference
         await self._send_config_packet(0x59, payload.to_bytes())
 
-    @controls.select(drain_mode, options=DrainMode)
+    @controls.select(
+        drain_mode,
+        options=DrainMode,
+        availability=power,
+        exclude=_drain_mode_excluded_options,
+    )
     async def set_drain_mode(self, mode: DrainMode):
         main_mode = self.main_mode
         if main_mode is MainMode.WARM or main_mode is MainMode.FAN:
@@ -218,16 +285,20 @@ class Device(DeviceBase, RawDataProps):
         fan_speed,
         modes={HvacMode.COOL, HvacMode.HEAT, HvacMode.FAN_ONLY},
     )
-    @controls.select(fan_speed, options=FanGear)
+    @controls.select(fan_speed, options=FanGear, availability=power)
     async def set_fan_speed(self, fan_gear: FanGear):
         await self._send_config_packet(0x5E, fan_gear.to_bytes())
 
     @_climate.mode()
-    @controls.select(main_mode, options=MainMode)
+    @controls.select(main_mode, options=MainMode, availability=power)
     async def set_main_mode(self, mode: MainMode):
         await self._send_config_packet(0x51, mode.to_bytes())
 
-    @controls.select(power_mode, options=PowerMode, exclude=[PowerMode.INIT])
+    @controls.select(
+        power_mode,
+        options=PowerMode,
+        exclude=_power_mode_excluded_options,
+    )
     async def set_power_mode(self, mode: PowerMode):
         await self._send_config_packet(0x5B, mode.to_bytes())
 
@@ -244,11 +315,12 @@ class Device(DeviceBase, RawDataProps):
         min=dynamic(target_temperature_min),
         max=dynamic(target_temperature_max),
         unit=dynamic(temp_unit),
+        availability=power,
     )
     async def set_temperature(self, temperature: float):
         await self._send_config_packet(0x58, int(temperature).to_bytes())
         return True
 
-    @controls.select(sub_mode, options=SubMode)
+    @controls.select(sub_mode, options=SubMode, availability=power)
     async def set_sub_mode(self, sub_mode: SubMode):
         await self._send_config_packet(0x52, sub_mode.to_bytes())

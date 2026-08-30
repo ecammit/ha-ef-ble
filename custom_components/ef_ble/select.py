@@ -1,6 +1,6 @@
 import dataclasses
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, Self
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.core import HomeAssistant, callback
@@ -10,6 +10,7 @@ from . import DeviceConfigEntry
 from .deprecated.selects import SELECT_TYPES
 from .description_builder import EntityDescriptionBuilder
 from .eflib import DeviceBase, controls, get_controls
+from .eflib.props import Field
 from .entity import EcoflowEntity
 
 
@@ -17,6 +18,7 @@ from .entity import EcoflowEntity
 class EcoflowSelectEntityDescription[T: DeviceBase](SelectEntityDescription):
     set_state: Callable[[T, str], Awaitable] | None = None
     availability_prop: str | None = None
+    excluded_options_prop: str | None = None
 
 
 class SelectSensorBuilder(EntityDescriptionBuilder):
@@ -24,9 +26,21 @@ class SelectSensorBuilder(EntityDescriptionBuilder):
         self._options = None
         self._async_set_native_value = None
         self._availability_prop = None
+        self._excluded_options_prop = None
 
     def options(self, options: list[str]):
         self._options = options
+        return self
+
+    def excluded_options_prop(self, exclude: "str | Field | list | None") -> Self:
+        if field := self._get_field(exclude):
+            self._excluded_options_prop = field.public_name
+        elif isinstance(exclude, list):
+            # A plain list is applied statically (baked into the option list
+            # itself), not resolved per instance - there's no prop to watch.
+            self._excluded_options_prop = None
+        else:
+            self._excluded_options_prop = exclude
         return self
 
     def async_set_native_value(
@@ -50,6 +64,7 @@ class SelectSensorBuilder(EntityDescriptionBuilder):
             translation_key=self._entity_translation_key,
             entity_registry_enabled_default=self._entity_registry_enabled_default,
             availability_prop=self._availability_prop,
+            excluded_options_prop=self._excluded_options_prop,
             icon=self._icon,
         )
 
@@ -79,6 +94,7 @@ async def async_setup_entry(
             .builder(select, SelectSensorBuilder.from_entity(select))
             .set_state(select.set_value_func)
             .availability_prop(select.availability_prop)
+            .excluded_options_prop(select.exclude)
             .options(select.options_str)
             .build()
         )
@@ -108,6 +124,9 @@ class EcoflowSelect(EcoflowEntity, SelectEntity):
         self._set_state = description.set_state
         self._attr_current_option = getattr(device, self._prop_name, None)
         self._availability_prop = description.availability_prop
+        self._excluded_options_prop = description.excluded_options_prop
+        self._all_options = description.options
+        self._attr_options = self._all_options
 
         if self.entity_description.translation_key is None:
             self._attr_translation_key = self.entity_description.key
@@ -126,6 +145,21 @@ class EcoflowSelect(EcoflowEntity, SelectEntity):
             prop_name=self._availability_prop,
             get_state=lambda state: state if state is not None else self.SkipWrite,
         )
+        self._register_update_callback(
+            entity_attr="_attr_options",
+            prop_name=self._excluded_options_prop,
+            get_state=self._compute_options,
+        )
+
+    def _compute_options(self, excluded: Any) -> list[str]:
+        if not excluded:
+            return self._all_options
+        excluded_names = {value.name.lower() for value in excluded}
+        return [option for option in self._all_options if option not in excluded_names]
+
+    @property
+    def options(self) -> list[str]:
+        return self._attr_options
 
     @property
     def available(self):
