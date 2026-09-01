@@ -430,11 +430,13 @@ class Connection:
             self._validate_characteristics()
         except UnsupportedBluetoothProtocol as e:
             error = e
-            if not e.available_characteristics:
-                # An empty service table is a host-side GATT cache glitch, not the
-                # device genuinely lacking the protocol - wipe the cache so the
-                # reconnect re-discovers services instead of failing the same way.
-                await self._clear_gatt_cache()
+            # A service table missing the characteristic we need is a host-side GATT
+            # cache glitch, not the device genuinely lacking the protocol - wipe the
+            # cache so the reconnect re-discovers services instead of resolving the
+            # same broken table again. This isn't limited to an empty table: BlueZ can
+            # also hand back a stale, partially-populated one (e.g. only the generic
+            # Service Changed characteristic) that's still missing ours.
+            await self._clear_gatt_cache()
             self._set_state(ConnectionState.ERROR_BLEAK, e)
         except TimeoutError as e:
             error = e
